@@ -14,6 +14,15 @@ BusMate centralizes bus, route, driver, schedule, and seat information in one sy
 
 ## ✨ Features
 
+### 👨‍💼 Admin
+
+* Admin login & dashboard
+* Manage students, buses, routes, and drivers
+* Assign buses, routes, and drivers
+* Manage schedules and seat allocation
+* View bus occupancy
+* Generate transportation reports
+
 ### 👩‍🎓 Student
 
 * College ID & password login
@@ -36,14 +45,15 @@ BusMate centralizes bus, route, driver, schedule, and seat information in one sy
 * Update bus status:
   **Not Started → Running → Completed**
 
-### 👨‍💼 Admin
+### 💺 Seat Allocation
 
-* Admin login & dashboard
-* Manage students, buses, routes, and drivers
-* Assign buses, routes, and drivers
-* Manage schedules and seat allocation
-* View bus occupancy
-* Generate transportation reports
+* View available seats
+* Seat allocation and cancellation
+* Seat preferences
+* Automatic seat allocation
+* Waiting list
+* Student-seat mapping
+* Bus occupancy
 
 ## 📊 Reports
 
@@ -57,13 +67,26 @@ BusMate centralizes bus, route, driver, schedule, and seat information in one sy
 ## 🔄 System Flow
 
 ```text
-Login
-  │
-  ├── Student → Buses/Routes → Seats → Allocation
-  │
-  ├── Driver  → Assigned Bus → Schedule → Status
-  │
-  └── Admin   → Manage System → Seats → Reports
+                         BusMate
+                            │
+                          Login
+                            │
+          ┌─────────────────┼─────────────────┐
+          ▼                 ▼                 ▼
+       Student            Driver             Admin
+          │                 │                 │
+     Student UI         Driver UI          Admin UI
+          │                 │                 │
+     Bus & Routes       Assigned Bus      Manage System
+     Seat Information   Schedule          Manage Data
+     Seat Allocation    Occupancy             │
+          │             Status                 ▼
+          │                 │                Reports
+          └─────────────────┼─────────────────┘
+                            │
+                       Data Storage
+                            │
+                      File Handling
 ```
 
 ## 🛠️ Technology
@@ -72,14 +95,14 @@ Login
 * **Application:** GUI-based Desktop Application
 * **Concepts:** Data Structures & File Handling
 
-## 👥 Project Modules
+## 👥 Team & Responsibilities
 
-| Module                  | Responsibility                                         |
-| ----------------------- | ------------------------------------------------------ |
-| **Student & Login**     | Student access, bus/route information                  |
-| **Bus, Route & Driver** | Bus, route, schedule & driver management               |
-| **Seat Allocation**     | Seat allocation, preferences, waiting list & occupancy |
-| **Admin & Reports**     | Administration, data management & reports              |
+| Member       | Name         | Responsibility                       |
+| ------------ | ------------ | ------------------------------------ |
+| **Member 1** | **Deeya**    | Admin, Reports & Overall Integration |
+| **Member 2** | **Smera**    | Student & Login                      |
+| **Member 3** | **Sapna**    | Bus, Route & Driver                  |
+| **Member 4** | **Gunjan**   | Seat Allocation                      |
 
 ## 🎯 Goal
 
