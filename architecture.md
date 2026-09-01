@@ -122,3 +122,19 @@ BusMate
 ├── architecture.md
 └── README.md
 ```
+## GUI Architecture
+
+```text
+Main Window
+     ↓
+ Login Screen
+     ↓
+ Role Selection
+ ┌──────┼──────┐
+ ↓      ↓      ↓
+Student Driver Admin
+  ↓      ↓      ↓
+Dashboard Dashboard Dashboard
+  │      │      │
+  ↓      ↓      ↓
+Modules Modules Modules
