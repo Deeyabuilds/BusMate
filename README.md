@@ -219,7 +219,7 @@ Data Files
 
 | Member       | Name         | Module                                  |
 | ------------ | ------------ | --------------------------------------- |
-| **Member 1** | **Deeya **   | **Admin & Reports**                     |
+| **Member 1** | **Deeya**    | **Admin & Reports**                     |
 | **Member 2** | **Smera**    | **Student & Login**                     |
 | **Member 3** | **Sapna**    | **Bus, Route & Driver + File Handling** |
 | **Member 4** | **Gunjan**   | **Seat Allocation**                     |
