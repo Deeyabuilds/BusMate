@@ -6,4 +6,5 @@ void saveStudent(Student student);
 void saveBus(Bus bus);
 void saveRoute(Route route);
 void saveDriver(Driver driver);
+void saveSchedule(Schedule schedule);
 #endif

@@ -44,3 +44,14 @@ void saveDriver(Driver driver)
     fwrite(&driver, sizeof(Driver), 1, file);
     fclose(file);
 }
+
+    void saveSchedule(Schedule schedule)
+{
+    FILE *file = fopen("data/schedules.dat", "ab");
+
+    if (file == NULL)
+        return;
+
+    fwrite(&schedule, sizeof(Schedule), 1, file);
+    fclose(file);
+}
