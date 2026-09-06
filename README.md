@@ -2,330 +2,140 @@
 
 ### Smart College Bus Management & Seat Allocation System
 
-**BusMate** is a **GUI-based college transportation management system** developed in **C**, using **Data Structures and File Handling**. It provides role-based access for **Students, Drivers, and Administrators** to manage and access college transportation information including buses, routes, schedules, drivers, and seat allocation.
+Managing college buses usually means dealing with scattered information — which bus goes where, how many seats are left, who is driving it, and whether a student has a seat.
+
+**BusMate** brings these things together in one GUI-based application built in **C**.
+
+Students can check buses, routes and seats, drivers can keep track of their assigned buses, and administrators can manage the overall transport system.
 
 ---
 
-## 📌 Overview
+## 🚍 What BusMate handles
 
-Managing college transportation can become difficult when information about buses, routes, schedules, availability, and seats is scattered or difficult to access.
+**For Students**
 
-**BusMate** provides a centralized system where:
-
-* **Students** can access bus information and manage their seats.
-* **Drivers** can view assigned buses, routes, schedules, and update journey status.
-* **Admins** can manage transportation data, monitor occupancy, and generate reports.
-* **File Handling** maintains persistent transportation records.
-* **Data Structures** organize and process system information efficiently.
-
----
-
-## 🎯 Objectives
-
-* Centralize college transportation information.
-* Provide role-based access for Students, Drivers, and Admins.
-* Allow students to search buses, routes, stops, and timings.
-* Provide seat availability and allocation.
-* Support Full Day / Half Day bus schedules.
-* Allow drivers to update journey status.
-* Maintain persistent records using file handling.
-* Generate useful transportation reports.
-* Integrate all modules into a single working system.
-
----
-
-# ✨ Features
-
-## 👩‍🎓 Student
-
-* College ID and password login
-* Student dashboard
-* View available buses
+* Login and personal dashboard
 * Search buses and routes
-* View routes, stops, and timings
-* Check Full Day / Half Day status
-* Check seat availability
-* Select seat preference:
+* View stops and timings
+* Check available seats
+* Choose seat preferences
+* Allocate or cancel a seat
+* Join the waiting list
 
-  * Window
-  * Front
-  * Any
-* Allocate a seat
-* View allocated seat
-* Cancel allocated seat
-* Join waiting list when seats are unavailable
-
----
-
-## 🚌 Driver
+**For Drivers**
 
 * Driver login
-* Driver dashboard
-* View assigned bus
-* View assigned route and stops
-* View daily schedule
-* View seat occupancy
-* Update bus status:
+* View assigned bus and route
+* Check schedules and occupancy
+* Update bus status
+
+**For Admins**
+
+* Manage students, buses, routes and drivers
+* Assign buses, routes and drivers
+* Manage schedules and seat information
+* Check bus occupancy
+* Generate reports
+
+---
+
+## 🪑 The Seat System
+
+Seat allocation is one of the main parts of BusMate.
+
+It keeps track of **which seats are available, which are occupied, and which student has been assigned to each seat**.
+
+When a bus reaches its capacity, students can be added to a **waiting list** instead of losing their request.
 
 ```text
-Not Started → Running → Completed
+Student
+   ↓
+Select Bus
+   ↓
+Check Availability
+   ↓
+Seat Available? ── No ──→ Waiting List
+   │
+  Yes
+   ↓
+Allocate Seat
+   ↓
+Update Occupancy
 ```
 
 ---
 
-## 👨‍💼 Admin
+## 💾 Where the data goes
 
-* Admin login and dashboard
-* Manage students
-* Manage buses
-* Manage routes and stops
-* Manage drivers
-* Assign buses, routes, and drivers
-* Manage Full Day / Half Day schedules
-* Manage seat allocation
-* Monitor bus occupancy
-* Generate transportation reports
+BusMate uses **file handling** to keep the application data available between runs.
 
----
-
-## 💺 Seat Allocation
-
-The seat management system supports:
-
-* Seat availability
-* Seat allocation
-* Seat cancellation
-* Seat preferences
-* Automatic seat allocation
-* Waiting list management
-* Student-seat mapping
-* Bus occupancy tracking
-
----
-
-# 📊 Reports
-
-Administrators can generate:
-
-* **Daily Bus Report**
-* **Bus Occupancy Report**
-* **Route-wise Report**
-* **Full Day / Half Day Report**
-* **Driver Report**
-* **Student Seat Report**
-
----
-
-# 🔄 Overall System Workflow
+Instead of every module handling files differently, the project uses a **common file-handling layer** that can be used by Student, Bus, Route, Driver and Seat Allocation modules.
 
 ```text
-                              ┌───────────────┐
-                              │    BusMate    │
-                              │  GUI System   │
-                              └───────┬───────┘
-                                      │
-                                  ┌───▼───┐
-                                  │ Login │
-                                  └───┬───┘
-                                      │
-                  ┌───────────────────┼───────────────────┐
-                  │                   │                   │
-                  ▼                   ▼                   ▼
-             ┌─────────┐         ┌─────────┐         ┌─────────┐
-             │ Student │         │ Driver  │         │  Admin  │
-             └────┬────┘         └────┬────┘         └────┬────┘
-                  │                   │                   │
-                  ▼                   ▼                   ▼
-           Student Services    Driver Services     Admin Services
-                  │                   │                   │
-                  └───────────────────┼───────────────────┘
-                                      │
-                              ┌───────▼────────┐
-                              │  Core Modules  │
-                              ├────────────────┤
-                              │ Bus            │
-                              │ Route          │
-                              │ Schedule       │
-                              │ Driver         │
-                              │ Seat Allocation│
-                              └───────┬────────┘
-                                      │
-                              ┌───────▼────────┐
-                              │ Data Structures│
-                              │ Search / Sort  │
-                              └───────┬────────┘
-                                      │
-                              ┌───────▼────────┐
-                              │ File Handling  │
-                              └───────┬────────┘
-                                      │
-                              ┌───────▼────────┐
-                              │   Data Files   │
-                              └────────────────┘
-```
-
----
-
-# 🏗️ Core Architecture
-
-BusMate follows a modular architecture that separates the **GUI, application logic, data structures, and persistent storage**.
-
-```text
-┌──────────────────────────────────────────┐
-│              GUI / UI Layer              │
-│ Login │ Student │ Driver │ Admin │ Seats │
-└────────────────────┬─────────────────────┘
-                     │
-┌────────────────────▼─────────────────────┐
-│            Application Layer             │
-│ Authentication │ Bus │ Route │ Schedule │
-│ Driver │ Seat Allocation │ Reports      │
-└────────────────────┬─────────────────────┘
-                     │
-┌────────────────────▼─────────────────────┐
-│             Data Layer                   │
-│ C Structures │ Searching │ Sorting       │
-└────────────────────┬─────────────────────┘
-                     │
-┌────────────────────▼─────────────────────┐
-│           File Handling Layer            │
-│ Create │ Read │ Write │ Update │ Delete  │
-└────────────────────┬─────────────────────┘
-                     │
-┌────────────────────▼─────────────────────┐
-│              Data Files                  │
-└──────────────────────────────────────────┘
-```
-
----
-
-# 🔗 Module Integration
-
-All modules work together through shared data structures and common data storage.
-
-For example:
-
-```text
-Admin adds / updates Bus
-          ↓
-      Bus Data
-          ↓
-Student can view Bus
-          ↓
-Seat Module uses Bus Capacity
-          ↓
-Driver is assigned to Bus
-          ↓
-Driver updates Bus Status
-          ↓
-Seat Occupancy is Updated
-          ↓
-Admin Generates Report
-```
-
-This allows information updated by one module to be used by other modules without maintaining separate copies of the same data.
-
----
-
-# 💾 Data Management & File Handling
-
-BusMate uses **C data structures** for organizing application data and **File Handling** for persistent storage.
-
-The system maintains records related to:
-
-* Students
-* Buses
-* Routes and stops
-* Drivers
-* Schedules
-* Seat allocations
-* Waiting lists
-
-### Data Flow
-
-```text
-User Input
-    ↓
-GUI
-    ↓
-Module Logic
-    ↓
-Data Structures
-    ↓
-File Handling
-    ↓
+Modules
+   ↓
+Common File Handling
+   ↓
 Data Files
 ```
 
-### File Operations
+The shared layer handles operations such as **create, read, write, update, delete and close**.
 
-The File Handling module supports:
+---
+
+## 🧩 Project Structure
 
 ```text
-Create / Open
-      ↓
-   Read
-      ↓
-   Write
-      ↓
-  Update
-      ↓
-  Delete
-      ↓
-   Close
+BusMate
+│
+├── Login & Authentication
+├── Student
+├── Driver
+├── Admin
+├── Bus & Route
+├── Seat Allocation
+├── Reports
+├── Data Structures
+└── File Handling
+```
+
+The overall flow is:
+
+```text
+GUI
+ ↓
+Modules
+ ↓
+Data Structures
+ ↓
+File Handling
+ ↓
+Stored Data
 ```
 
 ---
 
-# 🛠️ Technology
+## 🛠️ Tech Stack
 
-| Technology                  | Purpose                                   |
-| --------------------------- | ----------------------------------------- |
-| **C**                       | Core application development              |
-| **GUI Framework / Toolkit** | Graphical user interface                  |
-| **Data Structures**         | Data organization and processing          |
-| **File Handling**           | Persistent data storage                   |
-| **Searching & Sorting**     | Efficient data retrieval and organization |
-
-> The specific GUI framework/toolkit will be documented in the project architecture once finalized.
+* **C**
+* **GUI Framework / Toolkit**
+* **Data Structures**
+* **File Handling**
+* **Searching & Sorting**
 
 ---
 
-# 👥 Team
+## 👥 Team
 
-| Member       | Name         | Module                                                             |
-| ------------ | ------------ | ------------------------------------------------------------------ |
-| **Member 1** | **Deeya**    | **Admin, Reports, Core Architecture, Integration & Documentation** |
-| **Member 2** | **Smera**    | **Student & Login**                                                |
-| **Member 3** | **Sapna**    | **Bus, Route & Driver + File Handling**                            |
-| **Member 4** | **Gunjan**   | **Seat Allocation**                                                |
-
----
-
-# 📚 Project Documentation
-
-The project documentation will cover:
-
-* System Architecture
-* Overall Workflow
-* Module Design
-* Data Structures
-* File Handling
-* GUI Design
-* Module Integration
-* Testing
-* Project Implementation
-
-Detailed technical documentation will be maintained separately from the README.
+| Member     | Responsibility                                                 |
+| ---------- | -------------------------------------------------------------- |
+| **Deeya**  | Admin, Reports, Core Architecture, Integration & Documentation |
+| **Smera**  | Student Module & Login                                         |
+| **Sapna**  | Bus, Route & Driver Modules                                    |
+| **Gunjan** | Seat Allocation & File Handling                                |
 
 ---
 
-# 🎯 Project Goal
+## 📌 Project Focus
 
-BusMate aims to make college transportation **organized, accessible, and easier to manage** by providing students, drivers, and administrators with a centralized system for bus information, scheduling, seat allocation, and transportation management.
-
----
-
-## 🚌 BusMate
-
-**Smart Transportation. Better Management.**
+The project mainly focuses on applying **C programming and data structures** to a practical college transportation problem, while keeping the system modular enough for different team members to work on and integrate their parts.
