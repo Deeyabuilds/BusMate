@@ -1,5 +1,6 @@
 #include <gtk/gtk.h>
 #include "gui.h"
+#include "admin.h"
 
 static void show_role_screen(GtkWidget *widget, gpointer data)
 {
@@ -26,6 +27,8 @@ static void show_role_screen(GtkWidget *widget, gpointer data)
     student_button = gtk_button_new_with_label("Student");
     driver_button = gtk_button_new_with_label("Driver");
     admin_button = gtk_button_new_with_label("Admin");
+    g_signal_connect(admin_button, "clicked",
+                 G_CALLBACK(adminMenu), NULL);
 
     gtk_box_pack_start(GTK_BOX(box), title, FALSE, FALSE, 10);
     gtk_box_pack_start(GTK_BOX(box), student_button, FALSE, FALSE, 5);
