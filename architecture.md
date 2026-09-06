@@ -11,19 +11,25 @@
                             ▼
                           LOGIN
                             │
-             ┌──────────────┼──────────────┐
-             ▼              ▼              ▼
-          STUDENT         DRIVER          ADMIN
-             │              │              │
-             └──────────────┼──────────────┘
                             ▼
-                       CORE MODULES
+                     AUTHENTICATION
+                            │
+                            ▼
+                    ROLE IDENTIFICATION
                             │
               ┌─────────────┼─────────────┐
               ▼             ▼             ▼
-         BUS & ROUTE     SCHEDULE    SEAT ALLOCATION
+           STUDENT        DRIVER         ADMIN
               │             │             │
               └─────────────┼─────────────┘
+                            ▼
+                       CORE MODULES
+                            │
+             ┌──────────────┼──────────────┐
+             ▼              ▼              ▼
+        BUS & ROUTE      SCHEDULE    SEAT ALLOCATION
+             │              │              │
+             └──────────────┼──────────────┘
                             ▼
                      DATA STRUCTURES
                             │
@@ -34,82 +40,16 @@
                         DATA FILES
 ```
 
-## Modules
+## Core Modules
 
-### Authentication Module
-- Login
-- Credential validation
-- Role identification
-- Logout
-
-### Student Module
-- Student profile
-- Bus and route search
-- Schedule viewing
-- Seat availability
-- Seat allocation and cancellation
-- Waiting list
-
-### Driver Module
-- Driver profile
-- Assigned bus and route
-- Daily schedule
-- Seat occupancy
-- Bus status
-
-### Bus & Route Module
-- Bus information and management
-- Route and stop management
-- Bus/route search
-- Bus availability
-
-### Schedule Module
-- Schedule management
-- Timings
-- Full Day / Half Day schedule
-
-### Seat Allocation Module
-- Seat availability
-- Seat allocation and cancellation
-- Seat preferences
-- Student-seat mapping
-- Waiting list
-- Bus occupancy
-
-### Admin Module
-- Student management
-- Bus management
-- Route management
-- Driver management
-- Bus/route/driver assignment
-- Schedule and seat management
-- Dashboard
-
-### Reports Module
-- Daily Bus Report
-- Bus Occupancy Report
-- Route-wise Report
-- Full Day / Half Day Report
-- Driver Report
-- Student Seat Report
-
-## GUI Flow
-
-```text
-Login
-  ↓
-Role Selection
-  ↓
-Student / Driver / Admin Dashboard
-  ↓
-Required Module
-  ↓
-Data Processing
-  ↓
-Data Structures
-  ↓
-File Handling
-```
+* **Authentication** — Login, validation, role identification, logout
+* **Student** — Bus/route search, schedules, seat availability, allocation, waiting list
+* **Driver** — Assigned bus/route, schedule, occupancy, bus status
+* **Bus & Route** — Bus management, routes, stops, availability
+* **Schedule** — Timings, Full Day / Half Day schedules
+* **Seat Allocation** — Seat availability, preferences, allocation, cancellation, waiting list
+* **Admin** — Student, bus, route, driver and schedule management
+* **Reports** — Bus, occupancy, route, schedule, driver and student reports
 
 ## Project Structure
 
@@ -117,24 +57,26 @@ File Handling
 BusMate
 ├── data/
 ├── documentation/
+│   └── architecture.md
 ├── include/
 ├── src/
-├── architecture.md
 └── README.md
 ```
-## GUI Architecture
+
+## GUI Flow
 
 ```text
-Main Window
-     ↓
- Login Screen
-     ↓
- Role Selection
- ┌──────┼──────┐
- ↓      ↓      ↓
-Student Driver Admin
-  ↓      ↓      ↓
-Dashboard Dashboard Dashboard
-  │      │      │
-  ↓      ↓      ↓
-Modules Modules Modules
+Login
+  ↓
+Authentication
+  ↓
+Role Identification
+  ↓
+Dashboard
+  ↓
+Required Module
+  ↓
+Data Processing
+  ↓
+File Handling
+```
