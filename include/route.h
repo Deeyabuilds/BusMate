@@ -3,7 +3,7 @@
 
 #include "structures.h"
 
-void addRoute();
-void displayRoutes();
+void addRoute(void);
+void displayRoutes(void);
 
 #endif

@@ -5,9 +5,5 @@
 
 void addBus();
 void displayBuses();
-void addSchedule();
-void displaySchedules();
-void assignDriverToBus();
-void updateBusStatus();
 
 #endif

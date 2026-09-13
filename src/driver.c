@@ -14,14 +14,14 @@ void addDriver()
         return;
     }
 
-    printf("\nEnter Driver ID: ");
-    scanf("%d", &drivers[driverCount].driverId);
+   printf("\nEnter Driver ID: ");
+   scanf("%d", &drivers[driverCount].driverId);
 
-    printf("Enter Driver Name: ");
-    scanf(" %[^]", drivers[driverCount].name);
+   printf("Enter Driver Name: ");
+   scanf(" %[^\n]", drivers[driverCount].name);
 
-    printf("Enter Driver Phone: ");
-    scanf("%s", drivers[driverCount].phone);
+   printf("Enter Driver Phone: ");
+   scanf("%s", drivers[driverCount].phone);
 
     driverCount++;
 

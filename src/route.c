@@ -6,7 +6,7 @@
 Route routes[MAX_ROUTES];
 int routeCount = 0;
 
-void addRoute()
+void addRoute(void)
 {
     if (routeCount >= MAX_ROUTES)
     {
