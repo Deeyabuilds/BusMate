@@ -9,13 +9,11 @@ void saveStudent(Student student);
 void saveBus(Bus bus);
 void saveRoute(Route route);
 void saveDriver(Driver driver);
+void saveSchedule(Schedule schedule);
 
-// ==========================================
-// ADDED: Seat Allocation & Waiting List Functions
-// ==========================================
-
-#define BUS_DATA_FILE "data/seats.dat"
-#define WAITLIST_FILE "data/students.dat"
+// Seat Allocation & Waiting List Functions
+#define SEAT_DATA_FILE "data/seats.dat"
+#define WAITLIST_FILE "data/waitlist.dat"
 
 typedef enum
 {
