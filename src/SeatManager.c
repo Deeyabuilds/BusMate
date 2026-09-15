@@ -1,10 +1,11 @@
+Bestie :
 #include "../include/SeatManager.h"
 #include <stdio.h>
 #include <string.h>
 
 #define DATA_FILE "data/seats.dat"
 
-void init_seats_file()
+    void init_seats_file(void)
 {
     FILE *fp = fopen(DATA_FILE, "rb");
     if (!fp)
@@ -13,9 +14,10 @@ void init_seats_file()
         if (fp)
         {
             Seat empty_seat;
-            for (int i = 1; i <= 40; i++)
+            for (int i = 1; i <= TOTAL_SEATS; i++)
             {
                 empty_seat.seatNumber = i;
+                empty_seat.busId = 101; // Default Bus ID
                 empty_seat.studentId = 0;
                 strcpy(empty_seat.status, "Available");
                 strcpy(empty_seat.preference, "Any");
@@ -30,7 +32,7 @@ void init_seats_file()
     }
 }
 
-int book_seat_binary(int seat_id, const char *passenger_name)
+int book_seat_binary(int seat_id, int bus_id, int student_id, const char *preference)
 {
     FILE *fp = fopen(DATA_FILE, "rb+");
     if (!fp)
@@ -40,16 +42,28 @@ int book_seat_binary(int seat_id, const char *passenger_name)
     fseek(fp, (seat_id - 1) * sizeof(Seat), SEEK_SET);
 
     seat.seatNumber = seat_id;
-    seat.studentId = 1; // Mark as booked
+    seat.busId = bus_id;
+    seat.studentId = student_id;
+
     strncpy(seat.status, "Booked", sizeof(seat.status) - 1);
     seat.status[sizeof(seat.status) - 1] = '\0';
+
+    if (preference)
+    {
+        strncpy(seat.preference, preference, sizeof(seat.preference) - 1);
+        seat.preference[sizeof(seat.preference) - 1] = '\0';
+    }
+    else
+    {
+        strcpy(seat.preference, "Any");
+    }
 
     fwrite(&seat, sizeof(Seat), 1, fp);
     fclose(fp);
     return 1;
 }
 
-int is_seat_booked(int seat_id)
+int is_seat_booked(int seat_id, int bus_id)
 {
     FILE *fp = fopen(DATA_FILE, "rb");
     if (!fp)
@@ -60,14 +74,15 @@ int is_seat_booked(int seat_id)
     if (fread(&seat, sizeof(Seat), 1, fp) == 1)
     {
         fclose(fp);
-        return (strcmp(seat.status, "Booked") == 0);
+        return (seat.busId == bus_id && strcmp(seat.status, "Booked") == 0);
     }
 
     fclose(fp);
     return 0;
 }
+
 // ==========================================
-// ADDED: Preference Allocation & Auto Waitlist
+// Matrix Preference Allocation & Auto Waitlist
 // ==========================================
 
 static int seat_matrix[TOTAL_ROWS][SEATS_PER_ROW] = {0}; // 0 = Free, StudentID = Booked
@@ -88,7 +103,7 @@ void init_seat_system(void)
     init_storage_system();
 }
 
-int allocate_seat(int student_id, const char *name, SeatPreference pref)
+int allocate_seat(int student_id, const char *name, const char *pref)
 {
     int allocated_seat = -1;
 
@@ -99,13 +114,13 @@ int allocate_seat(int student_id, const char *name, SeatPreference pref)
         {
             if (seat_matrix[r][c] == 0)
             {
-                if (pref == PREF_WINDOW && is_window_seat(c))
+                if (pref && strcmp(pref, "Window") == 0 && is_window_seat(c))
                 {
                     allocated_seat = r * SEATS_PER_ROW + c + 1;
                     seat_matrix[r][c] = student_id;
                     break;
                 }
-                else if (pref == PREF_FRONT && is_front_seat(r))
+                else if (pref && strcmp(pref, "Front") == 0 && is_front_seat(r))
                 {
                     allocated_seat = r * SEATS_PER_ROW + c + 1;
                     seat_matrix[r][c] = student_id;
@@ -142,9 +157,13 @@ int allocate_seat(int student_id, const char *name, SeatPreference pref)
         Student st;
         st.studentId = student_id;
         strncpy(st.name, name, sizeof(st.name) - 1);
+        st.name[sizeof(st.name) - 1] = '\0';
         save_waiting_student(&st);
         return 0;
     }
+
+    // Sync with binary file
+    book_seat_binary(allocated_seat, 101, student_id, pref);
 
     return allocated_seat;
 }
