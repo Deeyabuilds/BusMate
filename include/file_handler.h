@@ -2,9 +2,28 @@
 #define FILE_HANDLER_H
 
 #include "structures.h"
+#include <stdbool.h>
+
+// Existing Team Functions
 void saveStudent(Student student);
 void saveBus(Bus bus);
 void saveRoute(Route route);
 void saveDriver(Driver driver);
 void saveSchedule(Schedule schedule);
+
+// Seat Allocation & Waiting List Functions
+#define SEAT_DATA_FILE "data/seats.dat"
+#define WAITLIST_FILE "data/waitlist.dat"
+
+typedef enum
+{
+    PREF_ANY = 0,
+    PREF_WINDOW,
+    PREF_FRONT
+} SeatPreference;
+
+bool init_storage_system(void);
+bool load_all_seats(void);
+bool save_waiting_student(const Student *student);
+
 #endif

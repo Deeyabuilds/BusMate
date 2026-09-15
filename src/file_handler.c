@@ -45,7 +45,7 @@ void saveDriver(Driver driver)
     fclose(file);
 }
 
-    void saveSchedule(Schedule schedule)
+void saveSchedule(Schedule schedule)
 {
     FILE *file = fopen("data/schedules.dat", "ab");
 
@@ -54,4 +54,42 @@ void saveDriver(Driver driver)
 
     fwrite(&schedule, sizeof(Schedule), 1, file);
     fclose(file);
+}
+
+// Seat Allocation & Waiting List Storage
+
+bool init_storage_system(void)
+{
+    FILE *fp1 = fopen(SEAT_DATA_FILE, "ab+");
+
+    if (!fp1)
+        return false;
+
+    fclose(fp1);
+
+    FILE *fp2 = fopen(WAITLIST_FILE, "ab+");
+
+    if (!fp2)
+        return false;
+
+    fclose(fp2);
+
+    return true;
+}
+
+bool save_waiting_student(const Student *student)
+{
+    if (!student)
+        return false;
+
+    FILE *fp = fopen(WAITLIST_FILE, "ab");
+
+    if (!fp)
+        return false;
+
+    size_t written = fwrite(student, sizeof(Student), 1, fp);
+
+    fclose(fp);
+
+    return written == 1;
 }
