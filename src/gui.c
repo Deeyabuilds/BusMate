@@ -1,78 +1,56 @@
 #include <gtk/gtk.h>
-#include "gui.h"
-#include "admin.h"
+#include "../include/SeatManager.h"
+#include "../include/structures.h"
 
-static void show_role_screen(GtkWidget *widget, gpointer data)
+static void on_seat_clicked(GtkWidget *widget, gpointer data)
 {
-    GtkWidget *window = GTK_WIDGET(data);
+    int seat_num = GPOINTER_TO_INT(data);
+    int current_bus_id = 101;   // Active Bus ID
+    int current_student_id = 1; // Active Student ID
 
-    GtkWidget *role_window;
-    GtkWidget *box;
-    GtkWidget *title;
-    GtkWidget *student_button;
-    GtkWidget *driver_button;
-    GtkWidget *admin_button;
+    if (is_seat_booked(seat_num, current_bus_id))
+    {
+        g_print("Seat %d is already booked.\n", seat_num);
+        return;
+    }
 
-    role_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-
-    gtk_window_set_title(GTK_WINDOW(role_window), "BusMate - Select Role");
-    gtk_window_set_default_size(GTK_WINDOW(role_window), 500, 400);
-    gtk_window_set_position(GTK_WINDOW(role_window), GTK_WIN_POS_CENTER);
-
-    box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 15);
-    gtk_container_set_border_width(GTK_CONTAINER(box), 40);
-
-    title = gtk_label_new("SELECT ROLE");
-
-    student_button = gtk_button_new_with_label("Student");
-    driver_button = gtk_button_new_with_label("Driver");
-    admin_button = gtk_button_new_with_label("Admin");
-    g_signal_connect(admin_button, "clicked",
-                 G_CALLBACK(adminMenu), NULL);
-
-    gtk_box_pack_start(GTK_BOX(box), title, FALSE, FALSE, 10);
-    gtk_box_pack_start(GTK_BOX(box), student_button, FALSE, FALSE, 5);
-    gtk_box_pack_start(GTK_BOX(box), driver_button, FALSE, FALSE, 5);
-    gtk_box_pack_start(GTK_BOX(box), admin_button, FALSE, FALSE, 5);
-
-    gtk_container_add(GTK_CONTAINER(role_window), box);
-
-    gtk_widget_show_all(role_window);
+    if (book_seat_binary(seat_num, current_bus_id, current_student_id, "Window"))
+    {
+        g_print("Seat %d booked successfully for Student %d\n", seat_num, current_student_id);
+        gtk_button_set_label(GTK_BUTTON(widget), "Booked");
+        gtk_widget_set_sensitive(widget, FALSE);
+    }
 }
 
-void start_gui(int argc, char *argv[])
+GtkWidget *create_seat_grid_view(void)
 {
-    gtk_init(&argc, &argv);
+    GtkWidget *grid = gtk_grid_new();
+    gtk_grid_set_row_spacing(GTK_GRID(grid), 5);
+    gtk_grid_set_column_spacing(GTK_GRID(grid), 5);
 
-    GtkWidget *window;
-    GtkWidget *box;
-    GtkWidget *title;
-    GtkWidget *login_button;
+    int current_bus_id = 101;
 
-    window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    for (int i = 1; i <= TOTAL_SEATS; i++)
+    {
+        char label[10];
+        snprintf(label, sizeof(label), "%d", i);
 
-    gtk_window_set_title(GTK_WINDOW(window), "BusMate");
-    gtk_window_set_default_size(GTK_WINDOW(window), 500, 400);
-    gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
+        GtkWidget *btn = gtk_button_new_with_label(label);
 
-    box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 15);
-    gtk_container_set_border_width(GTK_CONTAINER(box), 40);
+        if (is_seat_booked(i, current_bus_id))
+        {
+            gtk_button_set_label(GTK_BUTTON(btn), "Booked");
+            gtk_widget_set_sensitive(btn, FALSE);
+        }
+        else
+        {
+            g_signal_connect(btn, "clicked", G_CALLBACK(on_seat_clicked), GINT_TO_POINTER(i));
+        }
 
-    title = gtk_label_new("BUSMATE");
-    login_button = gtk_button_new_with_label("Login");
+        int row = (i - 1) / SEATS_PER_ROW;
+        int col = (i - 1) % SEATS_PER_ROW;
+        gtk_grid_attach(GTK_GRID(grid), btn, col, row, 1, 1);
+    }
 
-    gtk_box_pack_start(GTK_BOX(box), title, FALSE, FALSE, 20);
-    gtk_box_pack_start(GTK_BOX(box), login_button, FALSE, FALSE, 10);
-
-    gtk_container_add(GTK_CONTAINER(window), box);
-
-    g_signal_connect(login_button, "clicked",
-                     G_CALLBACK(show_role_screen), window);
-
-    g_signal_connect(window, "destroy",
-                     G_CALLBACK(gtk_main_quit), NULL);
-
-    gtk_widget_show_all(window);
-
-    gtk_main();
+    return grid;
 }
