@@ -462,6 +462,8 @@ void addRoute(void)
     }
 
     printf("Enter Route Name: ");
+    getchar();   // clear leftover newline
+
     fgets(route.routeName, sizeof(route.routeName), stdin);
     route.routeName[strcspn(route.routeName, "\n")] = '\0';
 
@@ -472,6 +474,7 @@ void addRoute(void)
     }
 
     printf("Enter Stops: ");
+
     fgets(route.stops, sizeof(route.stops), stdin);
     route.stops[strcspn(route.stops, "\n")] = '\0';
 
@@ -485,7 +488,6 @@ void addRoute(void)
 
     printf("Route added successfully!\n");
 }
-
 // View Routes
 void viewRoutes(void)
 {
