@@ -1,20 +1,20 @@
-#ifndef WAITING_LIST_H
-#define WAITING_LIST_H
+#ifndef WAITINGLIST_H
+#define WAITINGLIST_H
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "structures.h"
 
-// Student node info
+// Linked List Node for Waiting Queue using official Student struct
 typedef struct StudentNode
 {
-    char student_id[20];
-    char name[50];
-    char route_id[20];
+    Student student; // TL ka official Student struct (studentId, name, password)
+    int routeId;     // TL ke Route struct se aligned integer routeId
     struct StudentNode *next;
 } StudentNode;
 
-// Queue structure
+// Queue Structure
 typedef struct
 {
     StudentNode *front;
@@ -22,12 +22,12 @@ typedef struct
     int count;
 } WaitingQueue;
 
-// Function prototypes
-WaitingQueue *create_queue();
-int enqueue_student(WaitingQueue *q, const char *id, const char *name, const char *route_id);
+// Function Declarations
+WaitingQueue *create_queue(void);
+int enqueue_student(WaitingQueue *q, int student_id, const char *name, int route_id);
 StudentNode *dequeue_student(WaitingQueue *q);
-void free_queue(WaitingQueue *q);
 int save_waiting_list(WaitingQueue *q, const char *filename);
 int load_waiting_list(WaitingQueue *q, const char *filename);
+void free_queue(WaitingQueue *q);
 
-#endif // WAITING_LIST_H
+#endif

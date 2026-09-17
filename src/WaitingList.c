@@ -1,6 +1,6 @@
 #include "../include/WaitingList.h"
 
-WaitingQueue *create_queue()
+WaitingQueue *create_queue(void)
 {
     WaitingQueue *q = (WaitingQueue *)malloc(sizeof(WaitingQueue));
     if (!q)
@@ -11,7 +11,7 @@ WaitingQueue *create_queue()
     return q;
 }
 
-int enqueue_student(WaitingQueue *q, const char *id, const char *name, const char *route_id)
+int enqueue_student(WaitingQueue *q, int student_id, const char *name, int route_id)
 {
     if (!q)
         return 0;
@@ -20,9 +20,12 @@ int enqueue_student(WaitingQueue *q, const char *id, const char *name, const cha
     if (!new_node)
         return 0;
 
-    strncpy(new_node->student_id, id, sizeof(new_node->student_id) - 1);
-    strncpy(new_node->name, name, sizeof(new_node->name) - 1);
-    strncpy(new_node->route_id, route_id, sizeof(new_node->route_id) - 1);
+    new_node->student.studentId = student_id;
+    strncpy(new_node->student.name, name, sizeof(new_node->student.name) - 1);
+    new_node->student.name[sizeof(new_node->student.name) - 1] = '\0';
+    new_node->student.password[0] = '\0'; // Default empty password
+
+    new_node->routeId = route_id;
     new_node->next = NULL;
 
     if (q->rear == NULL)
@@ -52,13 +55,14 @@ StudentNode *dequeue_student(WaitingQueue *q)
     }
 
     q->count--;
-    return temp; // Free calling side par karein
+    return temp; // Freeing caller side par hoga
 }
 
 int save_waiting_list(WaitingQueue *q, const char *filename)
 {
     if (!q || !filename)
         return 0;
+
     FILE *fp = fopen(filename, "wb");
     if (!fp)
         return 0;
@@ -66,9 +70,9 @@ int save_waiting_list(WaitingQueue *q, const char *filename)
     StudentNode *current = q->front;
     while (current != NULL)
     {
-        fwrite(current->student_id, sizeof(char), 20, fp);
-        fwrite(current->name, sizeof(char), 50, fp);
-        fwrite(current->route_id, sizeof(char), 20, fp);
+        // Direct binary write matching official Student & Route structures
+        fwrite(&(current->student), sizeof(Student), 1, fp);
+        fwrite(&(current->routeId), sizeof(int), 1, fp);
         current = current->next;
     }
 
@@ -80,16 +84,17 @@ int load_waiting_list(WaitingQueue *q, const char *filename)
 {
     if (!q || !filename)
         return 0;
+
     FILE *fp = fopen(filename, "rb");
     if (!fp)
         return 0;
 
-    char id[20], name[50], route[20];
-    while (fread(id, sizeof(char), 20, fp) == 20 &&
-           fread(name, sizeof(char), 50, fp) == 50 &&
-           fread(route, sizeof(char), 20, fp) == 20)
+    Student st;
+    int r_id;
+    while (fread(&st, sizeof(Student), 1, fp) == 1 &&
+           fread(&r_id, sizeof(int), 1, fp) == 1)
     {
-        enqueue_student(q, id, name, route);
+        enqueue_student(q, st.studentId, st.name, r_id);
     }
 
     fclose(fp);
@@ -100,6 +105,7 @@ void free_queue(WaitingQueue *q)
 {
     if (!q)
         return;
+
     StudentNode *current = q->front;
     while (current != NULL)
     {
