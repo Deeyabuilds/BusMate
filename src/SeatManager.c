@@ -1,4 +1,7 @@
 #include "../include/SeatManager.h"
+#include "../include/file_handler.h"
+#include "../include/structures.h"
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -157,6 +160,8 @@ int allocate_seat(int student_id, const char *name, const char *pref)
         st.studentId = student_id;
         strncpy(st.name, name, sizeof(st.name) - 1);
         st.name[sizeof(st.name) - 1] = '\0';
+        st.password[0] = '\0';
+
         save_waiting_student(&st);
         return 0;
     }
