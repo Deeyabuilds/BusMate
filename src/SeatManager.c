@@ -1,11 +1,10 @@
-Bestie :
 #include "../include/SeatManager.h"
 #include <stdio.h>
 #include <string.h>
 
 #define DATA_FILE "data/seats.dat"
 
-    void init_seats_file(void)
+void init_seats_file(void)
 {
     FILE *fp = fopen(DATA_FILE, "rb");
     if (!fp)
