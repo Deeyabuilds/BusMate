@@ -3,7 +3,15 @@
 
 #include "structures.h"
 
-void addBus();
-void displayBuses();
+#define MAX_BUSES 50
+
+extern Bus buses[MAX_BUSES];
+extern int busCount;
+
+void loadBuses(void);
+int busExists(int busId);
+int addBus(int busId, const char *busNumber, int capacity);
+int removeBus(int busId);
+void displayBuses(void);
 
 #endif
