@@ -1,0 +1,23 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build BusMate",
+            "type": "process",
+            "command": "C:\\Windows\\System32\\cmd.exe",
+            "args": [
+                "/d",
+                "/c",
+                "src\\build.bat"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}\\BusMate"
+            },
+            "problemMatcher": "$gcc",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
+}

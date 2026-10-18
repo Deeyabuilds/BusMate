@@ -3,6 +3,7 @@
 #include <string.h>
 #include "admin.h"
 #include "file_handler.h"
+#include "seat_allocation.h"
 
 // Input Integer
 int getInteger(const char *message)
@@ -168,23 +169,23 @@ void studentManagement(void)
 
         switch (choice)
         {
-            case 1:
-                addStudent();
-                break;
+        case 1:
+            addStudent();
+            break;
 
-            case 2:
-                viewStudents();
-                break;
+        case 2:
+            viewStudents();
+            break;
 
-            case 3:
-                removeStudent();
-                break;
+        case 3:
+            removeStudent();
+            break;
 
-            case 0:
-                break;
+        case 0:
+            break;
 
-            default:
-                printf("Invalid choice!\n");
+        default:
+            printf("Invalid choice!\n");
         }
 
     } while (choice != 0);
@@ -219,7 +220,7 @@ int busIdExists(int id)
 // Add Bus
 void addBus(void)
 {
-    Bus bus;
+    Bus bus = {0};
 
     printf("\n====== ADD BUS ======\n");
 
@@ -228,12 +229,6 @@ void addBus(void)
     if (bus.busId <= 0)
     {
         printf("Invalid Bus ID!\n");
-        return;
-    }
-
-    if (busIdExists(bus.busId))
-    {
-        printf("Bus ID already exists!\n");
         return;
     }
 
@@ -256,10 +251,12 @@ void addBus(void)
     }
 
     bus.availableSeats = bus.capacity;
-
-    saveBus(bus);
-
-    printf("Bus added successfully!\n");
+    if (!createBusWithSeats(&bus))
+    {
+        printf("Bus could not be added. Check for a duplicate ID or inconsistent seat data.\n");
+        return;
+    }
+    printf("Bus added and seat records initialized successfully!\n");
 }
 
 // View Buses
@@ -293,7 +290,6 @@ void viewBuses(void)
 void removeBus(void)
 {
     int busId;
-    int deleted = 0;
 
     printf("\n====== REMOVE BUS ======\n");
 
@@ -305,16 +301,18 @@ void removeBus(void)
         return;
     }
 
-    if (!deleteRecordById(BUSES_FILE, sizeof(Bus), offsetof(Bus, busId), busId, &deleted))
+    if (!busIdExists(busId))
     {
-        printf("Unable to update bus records.\n");
+        printf("Bus not found.\n");
         return;
     }
 
-    if (deleted)
-        printf("Bus removed successfully!\n");
-    else
-        printf("Bus not found.\n");
+    if (!removeBusWithSeats(busId))
+    {
+        printf("Bus was not removed. Check seat consistency, bookings, and waiting-list entries.\n");
+        return;
+    }
+    printf("Bus and its available seat records removed successfully.\n");
 }
 
 // Bus Management
@@ -334,23 +332,23 @@ void busManagement(void)
 
         switch (choice)
         {
-            case 1:
-                addBus();
-                break;
+        case 1:
+            addBus();
+            break;
 
-            case 2:
-                viewBuses();
-                break;
+        case 2:
+            viewBuses();
+            break;
 
-            case 3:
-                removeBus();
-                break;
+        case 3:
+            removeBus();
+            break;
 
-            case 0:
-                break;
+        case 0:
+            break;
 
-            default:
-                printf("Invalid choice!\n");
+        default:
+            printf("Invalid choice!\n");
         }
 
     } while (choice != 0);
@@ -500,23 +498,23 @@ void routeManagement(void)
 
         switch (choice)
         {
-            case 1:
-                addRoute();
-                break;
+        case 1:
+            addRoute();
+            break;
 
-            case 2:
-                viewRoutes();
-                break;
+        case 2:
+            viewRoutes();
+            break;
 
-            case 3:
-                removeRoute();
-                break;
+        case 3:
+            removeRoute();
+            break;
 
-            case 0:
-                break;
+        case 0:
+            break;
 
-            default:
-                printf("Invalid choice!\n");
+        default:
+            printf("Invalid choice!\n");
         }
 
     } while (choice != 0);
@@ -666,23 +664,23 @@ void driverManagement(void)
 
         switch (choice)
         {
-            case 1:
-                addDriver();
-                break;
+        case 1:
+            addDriver();
+            break;
 
-            case 2:
-                viewDrivers();
-                break;
+        case 2:
+            viewDrivers();
+            break;
 
-            case 3:
-                removeDriver();
-                break;
+        case 3:
+            removeDriver();
+            break;
 
-            case 0:
-                break;
+        case 0:
+            break;
 
-            default:
-                printf("Invalid choice!\n");
+        default:
+            printf("Invalid choice!\n");
         }
 
     } while (choice != 0);
@@ -861,23 +859,23 @@ void scheduleManagement(void)
 
         switch (choice)
         {
-            case 1:
-                addSchedule();
-                break;
+        case 1:
+            addSchedule();
+            break;
 
-            case 2:
-                viewSchedules();
-                break;
+        case 2:
+            viewSchedules();
+            break;
 
-            case 3:
-                removeSchedule();
-                break;
+        case 3:
+            removeSchedule();
+            break;
 
-            case 0:
-                break;
+        case 0:
+            break;
 
-            default:
-                printf("Invalid choice!\n");
+        default:
+            printf("Invalid choice!\n");
         }
 
     } while (choice != 0);
@@ -902,32 +900,32 @@ void adminMenu(void)
 
         switch (choice)
         {
-            case 1:
-                studentManagement();
-                break;
+        case 1:
+            studentManagement();
+            break;
 
-            case 2:
-                busManagement();
-                break;
+        case 2:
+            busManagement();
+            break;
 
-            case 3:
-                routeManagement();
-                break;
+        case 3:
+            routeManagement();
+            break;
 
-            case 4:
-                driverManagement();
-                break;
+        case 4:
+            driverManagement();
+            break;
 
-            case 5:
-                scheduleManagement();
-                break;
+        case 5:
+            scheduleManagement();
+            break;
 
-            case 0:
-                printf("Logging out...\n");
-                break;
+        case 0:
+            printf("Logging out...\n");
+            break;
 
-            default:
-                printf("Invalid choice!\n");
+        default:
+            printf("Invalid choice!\n");
         }
 
     } while (choice != 0);

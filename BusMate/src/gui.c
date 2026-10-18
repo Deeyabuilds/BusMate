@@ -12,7 +12,7 @@ typedef struct
 {
     GtkWidget *window;
     GtkWidget *bus_combo;
-    GtkWidget *student_id_entry;
+    GtkWidget *student_combo;
     GtkWidget *preference_combo;
     GtkWidget *seat_grid;
     GtkWidget *summary_label;
@@ -28,6 +28,14 @@ typedef struct
     GtkWidget *passenger_view;
     GtkWidget *status_label;
 } DriverWindow;
+
+typedef struct
+{
+    GtkWidget *window;
+    GtkWidget *student_id_entry;
+    GtkWidget *password_entry;
+    GtkWidget *status_label;
+} StudentLoginWindow;
 
 static int read_positive_id(GtkWidget *entry, int *id)
 {
@@ -47,7 +55,8 @@ static int read_positive_id(GtkWidget *entry, int *id)
     return 1;
 }
 
-static int authenticate_student(int studentId);
+static int authenticate_student(int studentId, const char *password);
+static int student_exists(int studentId);
 
 static const char *get_preference(SeatWindow *context)
 {
@@ -69,6 +78,64 @@ static int read_selected_bus_id(SeatWindow *context, int *busId)
         return 0;
     *busId = (int)value;
     return 1;
+}
+
+static int read_selected_student_id(SeatWindow *context, int *studentId)
+{
+    const char *activeId = gtk_combo_box_get_active_id(
+        GTK_COMBO_BOX(context->student_combo));
+    char *end;
+    long value;
+
+    if (activeId == NULL)
+        return 0;
+    errno = 0;
+    value = strtol(activeId, &end, 10);
+    if (activeId == end || *end != '\0' || errno == ERANGE || value <= 0 || value > INT_MAX)
+        return 0;
+    *studentId = (int)value;
+    return 1;
+}
+
+static int load_registered_students(SeatWindow *context, int selectedStudentId)
+{
+    Student *students;
+    void *records = NULL;
+    size_t count = 0;
+    size_t index;
+    size_t validCount = 0;
+
+    gtk_combo_box_text_remove_all(GTK_COMBO_BOX_TEXT(context->student_combo));
+    if (!readRecords(STUDENTS_FILE, sizeof(Student), &records, &count))
+        return 0;
+    students = records;
+    for (index = 0; index < count; index++)
+    {
+        char *id;
+        char *label;
+
+        if (students[index].studentId <= 0)
+            continue;
+        id = g_strdup_printf("%d", students[index].studentId);
+        label = g_strdup_printf("Student %d", students[index].studentId);
+        gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(context->student_combo), id, label);
+        g_free(id);
+        g_free(label);
+        validCount++;
+    }
+    free(records);
+    if (selectedStudentId > 0)
+    {
+        char *activeId = g_strdup_printf("%d", selectedStudentId);
+        if (!gtk_combo_box_set_active_id(GTK_COMBO_BOX(context->student_combo), activeId))
+            gtk_combo_box_set_active(GTK_COMBO_BOX(context->student_combo),
+                                     validCount == 0 ? -1 : 0);
+        g_free(activeId);
+    }
+    else
+        gtk_combo_box_set_active(GTK_COMBO_BOX(context->student_combo),
+                                 validCount == 0 ? -1 : 0);
+    return validCount != 0;
 }
 
 static void clear_seat_grid(SeatWindow *context)
@@ -230,12 +297,21 @@ static void on_allocate_clicked(GtkButton *button, gpointer user_data)
     char message[100];
 
     (void)button;
-    if (!read_selected_bus_id(context, &busId) ||
-        !read_positive_id(context->student_id_entry, &studentId) ||
-        !authenticate_student(studentId))
+    if (!read_selected_bus_id(context, &busId))
+    {
+        gtk_label_set_text(GTK_LABEL(context->status_label), "Select a bus first.");
+        return;
+    }
+    if (!read_selected_student_id(context, &studentId))
     {
         gtk_label_set_text(GTK_LABEL(context->status_label),
-                           "Select a bus and enter a registered student ID.");
+                           "No registered students found. Add a student record first.");
+        return;
+    }
+    if (!student_exists(studentId))
+    {
+        gtk_label_set_text(GTK_LABEL(context->status_label),
+                           "The selected student is no longer registered. Reload the app.");
         return;
     }
     preference = get_preference(context);
@@ -275,12 +351,21 @@ static void on_cancel_clicked(GtkButton *button, gpointer user_data)
     char message[120];
 
     (void)button;
-    if (!read_selected_bus_id(context, &busId) ||
-        !read_positive_id(context->student_id_entry, &studentId) ||
-        !authenticate_student(studentId))
+    if (!read_selected_bus_id(context, &busId))
+    {
+        gtk_label_set_text(GTK_LABEL(context->status_label), "Select a bus first.");
+        return;
+    }
+    if (!read_selected_student_id(context, &studentId))
     {
         gtk_label_set_text(GTK_LABEL(context->status_label),
-                           "Select a bus and enter a registered student ID.");
+                           "No registered students found. Add a student record first.");
+        return;
+    }
+    if (!student_exists(studentId))
+    {
+        gtk_label_set_text(GTK_LABEL(context->status_label),
+                           "The selected student is no longer registered. Reload the app.");
         return;
     }
     cancellationResult = cancelSeat(busId, studentId, &freed, &promotedStudentId);
@@ -288,9 +373,7 @@ static void on_cancel_clicked(GtkButton *button, gpointer user_data)
         cancellationResult == SEAT_CANCELLATION_NOT_FOUND)
     {
         gtk_label_set_text(GTK_LABEL(context->status_label),
-                           cancellationResult == SEAT_CANCELLATION_NOT_FOUND ?
-                           "No booked seat was found for this student." :
-                           "Could not update the seat files; cancellation failed.");
+                           cancellationResult == SEAT_CANCELLATION_NOT_FOUND ? "No booked seat was found for this student." : "Could not update the seat files; cancellation failed.");
         return;
     }
     if (cancellationResult == SEAT_CANCELLATION_PROMOTION_FAILED)
@@ -346,7 +429,7 @@ static void on_seat_window_destroy(GtkWidget *widget, gpointer user_data)
     g_free(user_data);
 }
 
-static void show_seat_allocation(GtkButton *button, gpointer user_data)
+static void show_seat_allocation(GtkWindow *parent, int studentId)
 {
     SeatWindow *context = g_new0(SeatWindow, 1);
     GtkWidget *box;
@@ -358,13 +441,12 @@ static void show_seat_allocation(GtkButton *button, gpointer user_data)
     GtkWidget *waiting_button;
     GtkWidget *label;
 
-    (void)button;
     context->window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_window_set_title(GTK_WINDOW(context->window), "BusMate - Seat Allocation");
     gtk_window_set_default_size(GTK_WINDOW(context->window), 760, 600);
     gtk_window_set_position(GTK_WINDOW(context->window), GTK_WIN_POS_CENTER);
-    if (GTK_IS_WINDOW(user_data))
-        gtk_window_set_transient_for(GTK_WINDOW(context->window), GTK_WINDOW(user_data));
+    if (GTK_IS_WINDOW(parent))
+        gtk_window_set_transient_for(GTK_WINDOW(context->window), parent);
     g_signal_connect(context->window, "destroy",
                      G_CALLBACK(on_seat_window_destroy), context);
 
@@ -384,13 +466,12 @@ static void show_seat_allocation(GtkButton *button, gpointer user_data)
     gtk_widget_set_hexpand(context->bus_combo, TRUE);
     gtk_grid_attach(GTK_GRID(form_grid), context->bus_combo, 1, 0, 2, 1);
 
-    label = gtk_label_new("Student ID");
+    label = gtk_label_new("Student");
     gtk_widget_set_halign(label, GTK_ALIGN_START);
     gtk_grid_attach(GTK_GRID(form_grid), label, 0, 1, 1, 1);
-    context->student_id_entry = gtk_entry_new();
-    gtk_entry_set_input_purpose(GTK_ENTRY(context->student_id_entry), GTK_INPUT_PURPOSE_DIGITS);
-    gtk_entry_set_placeholder_text(GTK_ENTRY(context->student_id_entry), "Registered student ID");
-    gtk_grid_attach(GTK_GRID(form_grid), context->student_id_entry, 1, 1, 1, 1);
+    context->student_combo = gtk_combo_box_text_new();
+    gtk_widget_set_hexpand(context->student_combo, TRUE);
+    gtk_grid_attach(GTK_GRID(form_grid), context->student_combo, 1, 1, 1, 1);
 
     label = gtk_label_new("Preference");
     gtk_widget_set_halign(label, GTK_ALIGN_START);
@@ -438,9 +519,12 @@ static void show_seat_allocation(GtkButton *button, gpointer user_data)
 
     gtk_widget_show_all(context->window);
     on_load_bus_clicked(GTK_BUTTON(load_button), context);
+    if (!load_registered_students(context, studentId))
+        gtk_label_set_text(GTK_LABEL(context->status_label),
+                           "No registered students found. Add a student record first.");
 }
 
-static int authenticate_student(int studentId)
+static int student_exists(int studentId)
 {
     Student *students = NULL;
     void *records = NULL;
@@ -459,6 +543,215 @@ static int authenticate_student(int studentId)
         }
     free(records);
     return authenticated;
+}
+
+static int authenticate_student(int studentId, const char *password)
+{
+    Student *students;
+    void *records = NULL;
+    size_t count = 0;
+    size_t index;
+    int authenticated = 0;
+
+    if (studentId <= 0 || password == NULL || password[0] == '\0' ||
+        !readRecords(STUDENTS_FILE, sizeof(Student), &records, &count))
+        return 0;
+    students = records;
+    for (index = 0; index < count; index++)
+        if (students[index].studentId == studentId &&
+            memchr(students[index].password, '\0', sizeof(students[index].password)) != NULL &&
+            strcmp(students[index].password, password) == 0)
+        {
+            authenticated = 1;
+            break;
+        }
+    free(records);
+    return authenticated;
+}
+
+static void on_student_login(GtkButton *button, gpointer user_data)
+{
+    StudentLoginWindow *context = user_data;
+    int studentId;
+    const char *password;
+
+    (void)button;
+    if (!read_positive_id(context->student_id_entry, &studentId))
+    {
+        gtk_label_set_text(GTK_LABEL(context->status_label),
+                           "Enter a valid positive student ID.");
+        return;
+    }
+    password = gtk_entry_get_text(GTK_ENTRY(context->password_entry));
+    if (!authenticate_student(studentId, password))
+    {
+        gtk_label_set_text(GTK_LABEL(context->status_label),
+                           "Student ID or password is incorrect.");
+        return;
+    }
+    gtk_label_set_text(GTK_LABEL(context->status_label), "Signed in.");
+    show_seat_allocation(GTK_WINDOW(context->window), studentId);
+}
+
+static void on_student_register(GtkButton *button, gpointer user_data)
+{
+    StudentLoginWindow *login = user_data;
+    GtkWidget *dialog;
+    GtkWidget *content;
+    GtkWidget *grid;
+    GtkWidget *idEntry;
+    GtkWidget *nameEntry;
+    GtkWidget *passwordEntry;
+    GtkWidget *confirmEntry;
+    int response;
+
+    (void)button;
+    dialog = gtk_dialog_new_with_buttons("Create Student Account",
+                                         GTK_WINDOW(login->window), GTK_DIALOG_MODAL,
+                                         "Cancel", GTK_RESPONSE_CANCEL,
+                                         "Create Account", GTK_RESPONSE_ACCEPT, NULL);
+    content = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+    grid = gtk_grid_new();
+    gtk_grid_set_row_spacing(GTK_GRID(grid), 8);
+    gtk_grid_set_column_spacing(GTK_GRID(grid), 8);
+    gtk_container_set_border_width(GTK_CONTAINER(grid), 16);
+    gtk_container_add(GTK_CONTAINER(content), grid);
+
+    gtk_grid_attach(GTK_GRID(grid), gtk_label_new("Student ID"), 0, 0, 1, 1);
+    idEntry = gtk_entry_new();
+    gtk_entry_set_input_purpose(GTK_ENTRY(idEntry), GTK_INPUT_PURPOSE_DIGITS);
+    gtk_grid_attach(GTK_GRID(grid), idEntry, 1, 0, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), gtk_label_new("Name"), 0, 1, 1, 1);
+    nameEntry = gtk_entry_new();
+    gtk_entry_set_max_length(GTK_ENTRY(nameEntry), sizeof(((Student *)0)->name) - 1);
+    gtk_grid_attach(GTK_GRID(grid), nameEntry, 1, 1, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), gtk_label_new("Password"), 0, 2, 1, 1);
+    passwordEntry = gtk_entry_new();
+    gtk_entry_set_visibility(GTK_ENTRY(passwordEntry), FALSE);
+    gtk_entry_set_max_length(GTK_ENTRY(passwordEntry), sizeof(((Student *)0)->password) - 1);
+    gtk_grid_attach(GTK_GRID(grid), passwordEntry, 1, 2, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), gtk_label_new("Confirm password"), 0, 3, 1, 1);
+    confirmEntry = gtk_entry_new();
+    gtk_entry_set_visibility(GTK_ENTRY(confirmEntry), FALSE);
+    gtk_entry_set_max_length(GTK_ENTRY(confirmEntry), sizeof(((Student *)0)->password) - 1);
+    gtk_grid_attach(GTK_GRID(grid), confirmEntry, 1, 3, 1, 1);
+
+    gtk_widget_show_all(dialog);
+    response = gtk_dialog_run(GTK_DIALOG(dialog));
+    if (response == GTK_RESPONSE_ACCEPT)
+    {
+        Student student = {0};
+        Student *students;
+        void *records = NULL;
+        size_t count = 0;
+        size_t index;
+        int studentId;
+        const char *name = gtk_entry_get_text(GTK_ENTRY(nameEntry));
+        const char *password = gtk_entry_get_text(GTK_ENTRY(passwordEntry));
+        const char *confirmation = gtk_entry_get_text(GTK_ENTRY(confirmEntry));
+
+        if (!read_positive_id(idEntry, &studentId))
+            gtk_label_set_text(GTK_LABEL(login->status_label),
+                               "Choose a positive student ID.");
+        else if (name[0] == '\0' || password[0] == '\0')
+            gtk_label_set_text(GTK_LABEL(login->status_label),
+                               "Enter a name and a password.");
+        else if (strcmp(password, confirmation) != 0)
+            gtk_label_set_text(GTK_LABEL(login->status_label),
+                               "The passwords do not match.");
+        else if (!readRecords(STUDENTS_FILE, sizeof(Student), &records, &count))
+            gtk_label_set_text(GTK_LABEL(login->status_label),
+                               "Could not read the student records.");
+        else
+        {
+            students = records;
+            for (index = 0; index < count; index++)
+                if (students[index].studentId == studentId)
+                    break;
+            free(records);
+            if (index != count)
+                gtk_label_set_text(GTK_LABEL(login->status_label),
+                                   "That student ID is already registered.");
+            else
+            {
+                student.studentId = studentId;
+                g_strlcpy(student.name, name, sizeof(student.name));
+                g_strlcpy(student.password, password, sizeof(student.password));
+                if (!appendRecord(STUDENTS_FILE, sizeof(student), &student))
+                    gtk_label_set_text(GTK_LABEL(login->status_label),
+                                       "Could not save the new student account.");
+                else
+                {
+                    char idText[16];
+                    g_snprintf(idText, sizeof(idText), "%d", studentId);
+                    gtk_entry_set_text(GTK_ENTRY(login->student_id_entry), idText);
+                    gtk_entry_set_text(GTK_ENTRY(login->password_entry), password);
+                    gtk_label_set_text(GTK_LABEL(login->status_label),
+                                       "Account created. Sign in to continue.");
+                }
+            }
+        }
+    }
+    gtk_widget_destroy(dialog);
+}
+
+static void show_student_login(GtkButton *button, gpointer user_data)
+{
+    StudentLoginWindow *context = g_new0(StudentLoginWindow, 1);
+    GtkWidget *box;
+    GtkWidget *grid;
+    GtkWidget *label;
+    GtkWidget *signInButton;
+    GtkWidget *registerButton;
+    GtkWidget *buttonBox;
+
+    (void)button;
+    context->window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    gtk_window_set_title(GTK_WINDOW(context->window), "BusMate - Student Login");
+    gtk_window_set_default_size(GTK_WINDOW(context->window), 420, 280);
+    gtk_window_set_position(GTK_WINDOW(context->window), GTK_WIN_POS_CENTER);
+    if (GTK_IS_WINDOW(user_data))
+        gtk_window_set_transient_for(GTK_WINDOW(context->window), GTK_WINDOW(user_data));
+    g_signal_connect(context->window, "destroy",
+                     G_CALLBACK(on_seat_window_destroy), context);
+
+    box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 12);
+    gtk_container_set_border_width(GTK_CONTAINER(box), 24);
+    gtk_container_add(GTK_CONTAINER(context->window), box);
+    label = gtk_label_new("STUDENT LOGIN");
+    gtk_box_pack_start(GTK_BOX(box), label, FALSE, FALSE, 4);
+
+    grid = gtk_grid_new();
+    gtk_grid_set_row_spacing(GTK_GRID(grid), 10);
+    gtk_grid_set_column_spacing(GTK_GRID(grid), 10);
+    gtk_box_pack_start(GTK_BOX(box), grid, FALSE, FALSE, 0);
+    gtk_grid_attach(GTK_GRID(grid), gtk_label_new("Student ID"), 0, 0, 1, 1);
+    context->student_id_entry = gtk_entry_new();
+    gtk_entry_set_input_purpose(GTK_ENTRY(context->student_id_entry),
+                                GTK_INPUT_PURPOSE_DIGITS);
+    gtk_grid_attach(GTK_GRID(grid), context->student_id_entry, 1, 0, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), gtk_label_new("Password"), 0, 1, 1, 1);
+    context->password_entry = gtk_entry_new();
+    gtk_entry_set_visibility(GTK_ENTRY(context->password_entry), FALSE);
+    gtk_entry_set_activates_default(GTK_ENTRY(context->password_entry), TRUE);
+    gtk_grid_attach(GTK_GRID(grid), context->password_entry, 1, 1, 1, 1);
+
+    buttonBox = gtk_button_box_new(GTK_ORIENTATION_HORIZONTAL);
+    gtk_button_box_set_layout(GTK_BUTTON_BOX(buttonBox), GTK_BUTTONBOX_END);
+    gtk_box_set_spacing(GTK_BOX(buttonBox), 8);
+    gtk_box_pack_start(GTK_BOX(box), buttonBox, FALSE, FALSE, 0);
+    registerButton = gtk_button_new_with_label("Create Account");
+    signInButton = gtk_button_new_with_label("Sign In");
+    gtk_container_add(GTK_CONTAINER(buttonBox), registerButton);
+    gtk_container_add(GTK_CONTAINER(buttonBox), signInButton);
+    context->status_label = gtk_label_new("Sign in or create a student account.");
+    gtk_widget_set_halign(context->status_label, GTK_ALIGN_START);
+    gtk_box_pack_start(GTK_BOX(box), context->status_label, FALSE, FALSE, 0);
+    g_signal_connect(registerButton, "clicked",
+                     G_CALLBACK(on_student_register), context);
+    g_signal_connect(signInButton, "clicked",
+                     G_CALLBACK(on_student_login), context);
+    gtk_widget_show_all(context->window);
 }
 
 static void show_admin_bus_setup(GtkButton *button, gpointer user_data)
@@ -504,10 +797,6 @@ static void show_admin_bus_setup(GtkButton *button, gpointer user_data)
     if (response == GTK_RESPONSE_ACCEPT)
     {
         Bus bus;
-        Bus *existingBuses = NULL;
-        void *records = NULL;
-        size_t count = 0;
-        size_t index;
         int busId;
         int capacity;
         const char *busNumber = gtk_entry_get_text(GTK_ENTRY(bus_number_entry));
@@ -518,38 +807,17 @@ static void show_admin_bus_setup(GtkButton *button, gpointer user_data)
             !read_positive_id(capacity_entry, &capacity) || busNumber[0] == '\0' ||
             strlen(busNumber) >= sizeof(bus.busNumber))
             message = "Enter a positive bus ID and capacity, and a bus number under 20 characters.";
-        else if (!readRecords(BUSES_FILE, sizeof(Bus), &records, &count))
-            message = "Could not read buses.dat.";
         else
         {
-            existingBuses = records;
-            for (index = 0; index < count; index++)
-                if (existingBuses[index].busId == busId)
-                    break;
-            free(records);
-            if (index != count)
-                message = "That bus ID already exists.";
+            memset(&bus, 0, sizeof(bus));
+            bus.busId = busId;
+            bus.capacity = capacity;
+            bus.availableSeats = capacity;
+            g_strlcpy(bus.busNumber, busNumber, sizeof(bus.busNumber));
+            if (!createBusWithSeats(&bus))
+                message = "Bus could not be created. Check for a duplicate ID or inconsistent seat data.";
             else
-            {
-                memset(&bus, 0, sizeof(bus));
-                bus.busId = busId;
-                bus.capacity = capacity;
-                bus.availableSeats = capacity;
-                g_strlcpy(bus.busNumber, busNumber, sizeof(bus.busNumber));
-                if (!appendRecord(BUSES_FILE, sizeof(bus), &bus))
-                    message = "Could not save the bus record.";
-                else if (!initializeBusSeats(busId))
-                {
-                    int deleted = 0;
-                    deleteRecordById(SEATS_FILE, sizeof(Seat), offsetof(Seat, busId),
-                                     busId, &deleted);
-                    deleteRecordById(BUSES_FILE, sizeof(Bus), offsetof(Bus, busId),
-                                     busId, &deleted);
-                    message = "Could not initialize the seats; the bus record was rolled back.";
-                }
-                else
-                    message = "Bus added and all seats generated. Reload buses in the Student screen.";
-            }
+                message = "Bus added and all seats generated. Reload buses in the Student screen.";
         }
         resultDialog = gtk_message_dialog_new(GTK_WINDOW(user_data), GTK_DIALOG_MODAL,
                                               GTK_MESSAGE_INFO, GTK_BUTTONS_CLOSE,
@@ -695,7 +963,7 @@ static void show_role_screen(GtkWidget *widget, gpointer data)
     gtk_box_pack_start(GTK_BOX(box), admin_button, FALSE, FALSE, 5);
     gtk_container_add(GTK_CONTAINER(role_window), box);
 
-    g_signal_connect(student_button, "clicked", G_CALLBACK(show_seat_allocation), role_window);
+    g_signal_connect(student_button, "clicked", G_CALLBACK(show_student_login), role_window);
     g_signal_connect(driver_button, "clicked", G_CALLBACK(show_driver_occupancy), role_window);
     g_signal_connect(admin_button, "clicked", G_CALLBACK(show_admin_bus_setup), role_window);
     gtk_widget_show_all(role_window);

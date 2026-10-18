@@ -22,6 +22,9 @@ typedef enum
 } SeatCancellationResult;
 
 int initializeBusSeats(int busId);
+int validateBusSeatData(int busId);
+int createBusWithSeats(const Bus *bus);
+int removeBusWithSeats(int busId);
 int setSeatPreference(int busId, int seatNumber, const char *preference);
 int getBusSeats(int busId, Seat **seats, size_t *count);
 int displaySeatAvailability(int busId, FILE *output);

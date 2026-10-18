@@ -53,11 +53,16 @@ static int validateBusSeats(const Seat *seats, size_t count, int busId, int capa
         if (seats[index].seatNumber <= 0 || seats[index].seatNumber > capacity ||
             (strcmp(seats[index].status, "Available") != 0 &&
              strcmp(seats[index].status, "Booked") != 0) ||
-            (strcmp(seats[index].status, "Booked") == 0 && seats[index].studentId <= 0))
+            !validPreference(seats[index].preference) ||
+            (strcmp(seats[index].status, "Booked") == 0 && seats[index].studentId <= 0) ||
+            (strcmp(seats[index].status, "Available") == 0 && seats[index].studentId != 0))
             return 0;
         for (previous = 0; previous < index; previous++)
             if (seats[previous].busId == busId &&
-                seats[previous].seatNumber == seats[index].seatNumber)
+                (seats[previous].seatNumber == seats[index].seatNumber ||
+                 (strcmp(seats[index].status, "Booked") == 0 &&
+                  strcmp(seats[previous].status, "Booked") == 0 &&
+                  seats[previous].studentId == seats[index].studentId)))
                 return 0;
     }
     return 1;
@@ -107,12 +112,22 @@ static int findBus(int busId, Bus *result)
 static int persistSeatsAndCount(Seat *seats, size_t count, Bus oldBus)
 {
     size_t index;
+    size_t busSeatCount = 0;
     int available = 0;
     Bus updatedBus = oldBus;
 
+    if (oldBus.capacity <= 0 ||
+        !validateBusSeats(seats, count, oldBus.busId, oldBus.capacity))
+        return 0;
     for (index = 0; index < count; index++)
-        if (seats[index].busId == oldBus.busId && strcmp(seats[index].status, "Available") == 0)
-            available++;
+        if (seats[index].busId == oldBus.busId)
+        {
+            busSeatCount++;
+            if (strcmp(seats[index].status, "Available") == 0)
+                available++;
+        }
+    if (busSeatCount != (size_t)oldBus.capacity)
+        return 0;
     updatedBus.availableSeats = available;
 
     if (!updateBus(updatedBus))
@@ -132,6 +147,193 @@ static int loadSeats(Seat **seats, size_t *count)
         return 0;
     *seats = records;
     return 1;
+}
+
+int validateBusSeatData(int busId)
+{
+    Bus *buses = NULL;
+    Seat *seats = NULL;
+    void *busRecords = NULL;
+    size_t busCount = 0;
+    size_t seatCount = 0;
+    size_t index;
+    size_t matchingBuses = 0;
+    size_t matchingSeats = 0;
+    int available = 0;
+    int capacity = 0;
+    int recordedAvailable = 0;
+    Bus *bus = NULL;
+
+    if (busId <= 0 || !readRecords(BUSES_FILE, sizeof(Bus), &busRecords, &busCount) ||
+        !loadSeats(&seats, &seatCount))
+    {
+        free(busRecords);
+        free(seats);
+        return 0;
+    }
+    buses = busRecords;
+    for (index = 0; index < busCount; index++)
+        if (buses[index].busId == busId)
+        {
+            matchingBuses++;
+            bus = &buses[index];
+        }
+    if (matchingBuses != 1 || bus == NULL || bus->capacity <= 0 ||
+        bus->availableSeats < 0 || bus->availableSeats > bus->capacity ||
+        !validateBusSeats(seats, seatCount, busId, bus->capacity))
+    {
+        free(busRecords);
+        free(seats);
+        return 0;
+    }
+    for (index = 0; index < seatCount; index++)
+        if (seats[index].busId == busId)
+        {
+            matchingSeats++;
+            if (strcmp(seats[index].status, "Available") == 0)
+                available++;
+        }
+    capacity = bus->capacity;
+    recordedAvailable = bus->availableSeats;
+    free(busRecords);
+    free(seats);
+    return matchingSeats == (size_t)capacity && available == recordedAvailable;
+}
+
+int createBusWithSeats(const Bus *bus)
+{
+    void *records = NULL;
+    Seat *seats = NULL;
+    size_t busCount = 0;
+    size_t seatCount = 0;
+    size_t index;
+    int deleted = 0;
+    Bus newBus;
+
+    if (bus == NULL || bus->busId <= 0 || bus->capacity <= 0 ||
+        memchr(bus->busNumber, '\0', sizeof(bus->busNumber)) == NULL ||
+        bus->busNumber[0] == '\0' ||
+        !readRecords(BUSES_FILE, sizeof(Bus), &records, &busCount))
+        return 0;
+    for (index = 0; index < busCount; index++)
+        if (((Bus *)records)[index].busId == bus->busId)
+        {
+            free(records);
+            return 0;
+        }
+    free(records);
+    if (!loadSeats(&seats, &seatCount))
+        return 0;
+    for (index = 0; index < seatCount; index++)
+        if (seats[index].busId == bus->busId)
+        {
+            free(seats);
+            return 0;
+        }
+    free(seats);
+
+    newBus = *bus;
+    newBus.availableSeats = newBus.capacity;
+    if (!appendRecord(BUSES_FILE, sizeof(newBus), &newBus))
+        return 0;
+    if (initializeBusSeats(newBus.busId) && validateBusSeatData(newBus.busId))
+        return 1;
+
+    deleteRecordById(SEATS_FILE, sizeof(Seat), offsetof(Seat, busId),
+                     newBus.busId, &deleted);
+    deleteRecordById(BUSES_FILE, sizeof(Bus), offsetof(Bus, busId),
+                     newBus.busId, &deleted);
+    return 0;
+}
+
+int removeBusWithSeats(int busId)
+{
+    Bus *buses;
+    Seat *seats = NULL;
+    void *busRecords = NULL;
+    void *waitingRecords = NULL;
+    size_t busCount = 0;
+    size_t seatCount = 0;
+    size_t waitingCount = 0;
+    size_t index;
+    size_t matchingBuses = 0;
+    size_t keptBuses = 0;
+    size_t keptSeats = 0;
+    size_t seatOutputIndex = 0;
+    Bus *updatedBuses;
+    Seat *updatedSeats;
+    int busFound = 0;
+
+    if (busId <= 0 || !validateBusSeatData(busId) ||
+        !readRecords(BUSES_FILE, sizeof(Bus), &busRecords, &busCount) ||
+        !loadSeats(&seats, &seatCount) ||
+        !readRecords(WAITING_LIST_FILE, sizeof(WaitingEntry),
+                     &waitingRecords, &waitingCount))
+    {
+        free(busRecords);
+        free(seats);
+        free(waitingRecords);
+        return 0;
+    }
+    buses = busRecords;
+    for (index = 0; index < busCount; index++)
+        if (buses[index].busId == busId)
+        {
+            matchingBuses++;
+            busFound = 1;
+            if (buses[index].availableSeats != buses[index].capacity)
+                goto refuseRemoval;
+        }
+    if (!busFound || matchingBuses != 1)
+        goto refuseRemoval;
+    for (index = 0; index < seatCount; index++)
+        if (seats[index].busId != busId)
+            keptSeats++;
+    for (index = 0; index < waitingCount; index++)
+        if (((WaitingEntry *)waitingRecords)[index].busId == busId)
+            goto refuseRemoval;
+
+    updatedBuses = malloc(busCount * sizeof(*updatedBuses));
+    updatedSeats = keptSeats == 0 ? NULL : malloc(keptSeats * sizeof(*updatedSeats));
+    if (updatedBuses == NULL || (keptSeats != 0 && updatedSeats == NULL))
+    {
+        free(updatedBuses);
+        free(updatedSeats);
+        goto refuseRemoval;
+    }
+    for (index = 0; index < busCount; index++)
+        if (buses[index].busId != busId)
+            updatedBuses[keptBuses++] = buses[index];
+    keptBuses = 0;
+    for (index = 0; index < seatCount; index++)
+        if (seats[index].busId != busId)
+            updatedSeats[seatOutputIndex++] = seats[index];
+
+    if (!writeRecords(SEATS_FILE, sizeof(Seat), updatedSeats, keptSeats))
+    {
+        free(updatedBuses);
+        free(updatedSeats);
+        goto refuseRemoval;
+    }
+    if (!writeRecords(BUSES_FILE, sizeof(Bus), updatedBuses, busCount - 1))
+    {
+        writeRecords(SEATS_FILE, sizeof(Seat), seats, seatCount);
+        free(updatedBuses);
+        free(updatedSeats);
+        goto refuseRemoval;
+    }
+    free(updatedBuses);
+    free(updatedSeats);
+    free(busRecords);
+    free(seats);
+    free(waitingRecords);
+    return 1;
+
+refuseRemoval:
+    free(busRecords);
+    free(seats);
+    free(waitingRecords);
+    return 0;
 }
 
 int getBusSeats(int busId, Seat **seats, size_t *count)
