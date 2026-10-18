@@ -1,6 +1,0 @@
-{
-    "code-runner.executorMap": {
-        "c": "powershell -NoProfile -ExecutionPolicy Bypass -File \"$workspaceRoot\\BusMate\\src\\run.ps1\""
-    },
-    "code-runner.runInTerminal": true
-}
