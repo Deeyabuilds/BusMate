@@ -2,10 +2,50 @@
 #include "gui.h"
 #include "admin.h"
 
+static void show_admin_dashboard(GtkWidget *widget, gpointer data)
+{
+    GtkWidget *window;
+    GtkWidget *box;
+    GtkWidget *title;
+
+    window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+
+    gtk_window_set_title(GTK_WINDOW(window), "BusMate - Admin Dashboard");
+    gtk_window_set_default_size(GTK_WINDOW(window), 600, 450);
+    gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
+
+    box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 12);
+    gtk_container_set_border_width(GTK_CONTAINER(box), 30);
+
+    title = gtk_label_new("ADMIN DASHBOARD");
+
+    gtk_box_pack_start(GTK_BOX(box), title, FALSE, FALSE, 15);
+
+    const char *labels[] = {
+        "Student Management",
+        "Bus Management",
+        "Route Management",
+        "Driver Management",
+        "Schedule Management",
+        "Reports"
+    };
+
+    for (int i = 0; i < 6; i++)
+    {
+        GtkWidget *button = gtk_button_new_with_label(labels[i]);
+
+        gtk_box_pack_start(
+            GTK_BOX(box), button, FALSE, FALSE, 5
+        );
+    }
+
+    gtk_container_add(GTK_CONTAINER(window), box);
+
+    gtk_widget_show_all(window);
+}
+
 static void show_role_screen(GtkWidget *widget, gpointer data)
 {
-    GtkWidget *window = GTK_WIDGET(data);
-
     GtkWidget *role_window;
     GtkWidget *box;
     GtkWidget *title;
@@ -27,8 +67,13 @@ static void show_role_screen(GtkWidget *widget, gpointer data)
     student_button = gtk_button_new_with_label("Student");
     driver_button = gtk_button_new_with_label("Driver");
     admin_button = gtk_button_new_with_label("Admin");
-    g_signal_connect(admin_button, "clicked",
-                 G_CALLBACK(adminMenu), NULL);
+
+    g_signal_connect(
+        admin_button,
+        "clicked",
+        G_CALLBACK(show_admin_dashboard),
+        NULL
+    );
 
     gtk_box_pack_start(GTK_BOX(box), title, FALSE, FALSE, 10);
     gtk_box_pack_start(GTK_BOX(box), student_button, FALSE, FALSE, 5);
@@ -66,11 +111,19 @@ void start_gui(int argc, char *argv[])
 
     gtk_container_add(GTK_CONTAINER(window), box);
 
-    g_signal_connect(login_button, "clicked",
-                     G_CALLBACK(show_role_screen), window);
+    g_signal_connect(
+        login_button,
+        "clicked",
+        G_CALLBACK(show_role_screen),
+        window
+    );
 
-    g_signal_connect(window, "destroy",
-                     G_CALLBACK(gtk_main_quit), NULL);
+    g_signal_connect(
+        window,
+        "destroy",
+        G_CALLBACK(gtk_main_quit),
+        NULL
+    );
 
     gtk_widget_show_all(window);
 
