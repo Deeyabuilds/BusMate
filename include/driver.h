@@ -1,20 +1,27 @@
+
 #ifndef DRIVER_H
 #define DRIVER_H
 
-/* Driver Menu */
+#include "structures.h"
+
+#define MAX_DRIVERS 50
+
+extern Driver drivers[MAX_DRIVERS];
+extern int driverCount;
+
+/* Existing Driver Data Management */
+void loadDrivers(void);
+int driverExists(int driverId);
+int addDriver(int driverId, const char *name, const char *phone);
+int removeDriver(int driverId);
+void displayDrivers(void);
+
+/* Driver Portal */
 void driverMenu(void);
-
-/* Driver Profile */
 void viewDriverProfile(void);
-
-/* Assigned Bus and Route */
 void viewAssignedBus(void);
 void viewAssignedRoute(void);
-
-/* Schedule */
 void viewDriverSchedule(void);
-
-/* Bus Status */
 void updateBusStatus(void);
 void viewSeatOccupancy(void);
 
