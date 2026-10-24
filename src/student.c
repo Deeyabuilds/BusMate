@@ -1,320 +1,525 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+
 #include "structures.h"
+#include "file_handler.h"
+#include "seat_allocation.h"
 
-int studentLogin(Student *student)
+/* Student Module Functions */
+void studentMenu(void);
+void viewStudentProfile(void);
+void searchBuses(void);
+void viewStudentRoutes(void);
+void viewStudentSchedule(void);
+void checkSeatAvailability(void);
+void bookSeat(void);
+void cancelStudentBooking(void);
+void viewWaitingList(void);
+
+/* Read an integer safely */
+int readInteger(const char *message, int *value)
 {
-    int id;
-    char password[30];
+    char input[100];
+    char extra;
 
-    printf("\n--- Student Login ---\n");
-    printf("Enter College ID: ");
-    scanf("%d", &id);
+    printf("%s", message);
 
-    printf("Enter Password: ");
-    scanf("%29s", password);
+    if (fgets(input, sizeof(input), stdin) == NULL)
+        return 0;
 
-    if (student->studentId == id &&
-        strcmp(student->password, password) == 0)
+    if (sscanf(input, "%d %c", value, &extra) != 1)
     {
-        printf("\nLogin successful!\n");
-        return 1;
+        printf("Invalid input. Please enter a number.\n");
+        return 0;
     }
 
-    printf("\nInvalid ID or password.\n");
-    return 0;
+    return 1;
 }
 
-int findBus(Bus buses[], int totalBuses, int busId)
+/* View Student Profile */
+void viewStudentProfile(void)
 {
-    for (int i = 0; i < totalBuses; i++)
+    Student *students = NULL;
+    size_t count = 0;
+    size_t i;
+    int studentId;
+    int found = 0;
+
+    if (!readInteger("Enter Student ID: ", &studentId))
+        return;
+
+    if (!readRecords(STUDENTS_FILE, sizeof(Student),
+                     (void **)&students, &count))
     {
-        if (buses[i].busId == busId)
-            return i;
-    }
-
-    return -1;
-}
-
-int findRoute(Route routes[], int totalRoutes, int routeId)
-{
-    for (int i = 0; i < totalRoutes; i++)
-    {
-        if (routes[i].routeId == routeId)
-            return i;
-    }
-
-    return -1;
-}
-
-void availableBuses(Bus buses[], int totalBuses)
-{
-    printf("\n--- Available Buses ---\n");
-
-    for (int i = 0; i < totalBuses; i++)
-    {
-        printf("Bus ID: %d | Number: %s | Available Seats: %d\n",
-               buses[i].busId,
-               buses[i].busNumber,
-               buses[i].availableSeats);
-    }
-}
-
-void searchBus(Bus buses[], int totalBuses)
-{
-    int busId;
-
-    printf("\nEnter Bus ID to search: ");
-    scanf("%d", &busId);
-
-    int index = findBus(buses, totalBuses, busId);
-
-    if (index == -1)
-    {
-        printf("Bus not found.\n");
+        printf("Unable to load student records.\n");
         return;
     }
 
-    printf("Bus ID: %d\n", buses[index].busId);
-    printf("Bus Number: %s\n", buses[index].busNumber);
-    printf("Capacity: %d\n", buses[index].capacity);
-    printf("Available Seats: %d\n", buses[index].availableSeats);
-}
-
-void viewRouteTiming(Route routes[], int totalRoutes,
-                     Schedule schedules[], int totalSchedules,
-                     Bus buses[], int totalBuses)
-{
-    int busId;
-
-    printf("\nEnter Bus ID: ");
-    scanf("%d", &busId);
-
-    int busIndex = findBus(buses, totalBuses, busId);
-
-    if (busIndex == -1)
+    for (i = 0; i < count; i++)
     {
-        printf("Bus not found.\n");
-        return;
-    }
-
-    int found = 0;
-
-    for (int i = 0; i < totalSchedules; i++)
-    {
-        if (schedules[i].busId == busId)
+        if (students[i].studentId == studentId)
         {
-            int routeIndex = findRoute(
-                routes, totalRoutes, schedules[i].routeId);
+            printf("\n--- Student Profile ---\n");
+            printf("Student ID: %d\n", students[i].studentId);
+            printf("Name: %s\n", students[i].name);
 
-            if (routeIndex != -1)
-            {
-                printf("\nRoute: %s\n", routes[routeIndex].routeName);
-                printf("Stops: %s\n", routes[routeIndex].stops);
-                printf("Start Time: %s\n", schedules[i].startTime);
-                printf("End Time: %s\n", schedules[i].endTime);
-                printf("Day Type: %s\n", schedules[i].dayType);
-                found = 1;
-            }
-        }
-    }
-
-    if (!found)
-        printf("No schedule found for this bus.\n");
-}
-
-void checkSeatAvailability(Seat seats[], int totalSeats, int busId)
-{
-    int found = 0;
-
-    printf("\n--- Seat Availability ---\n");
-
-    for (int i = 0; i < totalSeats; i++)
-    {
-        if (seats[i].busId == busId &&
-            strcmp(seats[i].status, "Available") == 0)
-        {
-            printf("Seat Number: %d\n", seats[i].seatNumber);
             found = 1;
+            break;
         }
     }
 
     if (!found)
-        printf("No available seats found for this bus.\n");
+        printf("Student not found.\n");
+
+    free(students);
 }
 
-void bookSeat(Student *student, Seat seats[], int totalSeats)
+/* Search Buses */
+void searchBuses(void)
 {
-    int busId, seatNumber;
-    char preference[15];
+    Bus *buses = NULL;
+    size_t count = 0;
+    size_t i;
+    int choice;
+    int searchId;
+    char busNumber[32];
+    int found = 0;
 
-    printf("\nEnter Bus ID: ");
-    scanf("%d", &busId);
+    printf("\nSearch by:\n");
+    printf("1. Bus ID\n");
+    printf("2. Bus Number\n");
 
-    checkSeatAvailability(seats, totalSeats, busId);
+    if (!readInteger("Enter choice: ", &choice))
+        return;
 
-    printf("\nEnter Seat Number: ");
-    scanf("%d", &seatNumber);
-
-    printf("Preference (Front/Window/Any): ");
-    scanf("%14s", preference);
-
-    if (strcmp(preference, "Front") != 0 &&
-        strcmp(preference, "Window") != 0 &&
-        strcmp(preference, "Any") != 0)
+    if (!readRecords(BUSES_FILE, sizeof(Bus),
+                     (void **)&buses, &count))
     {
-        printf("Invalid preference.\n");
+        printf("Unable to load bus records.\n");
         return;
     }
 
-    for (int i = 0; i < totalSeats; i++)
+    if (choice == 1)
     {
-        if (seats[i].busId == busId &&
-            seats[i].seatNumber == seatNumber)
+        if (!readInteger("Enter Bus ID: ", &searchId))
         {
-            if (strcmp(seats[i].status, "Available") != 0)
-            {
-                printf("Seat is not available.\n");
-                return;
-            }
-
-            seats[i].studentId = student->studentId;
-            strcpy(seats[i].status, "Booked");
-            strcpy(seats[i].preference, preference);
-
-            printf("Seat booked successfully!\n");
+            free(buses);
             return;
         }
-    }
 
-    printf("Seat not found for this bus.\n");
-}
-
-void studentDetails(Student *student, Seat seats[], int totalSeats)
-{
-    printf("\n--- My Booking ---\n");
-    printf("Student ID: %d\n", student->studentId);
-    printf("Name: %s\n", student->name);
-
-    int found = 0;
-
-    for (int i = 0; i < totalSeats; i++)
-    {
-        if (seats[i].studentId == student->studentId &&
-            strcmp(seats[i].status, "Booked") == 0)
+        for (i = 0; i < count; i++)
         {
-            printf("Bus ID: %d\n", seats[i].busId);
-            printf("Seat Number: %d\n", seats[i].seatNumber);
-            printf("Preference: %s\n", seats[i].preference);
-            found = 1;
+            if (buses[i].busId == searchId)
+            {
+                printf("\nBus ID: %d\n", buses[i].busId);
+                printf("Bus Number: %s\n", buses[i].busNumber);
+                printf("Capacity: %d\n", buses[i].capacity);
+                printf("Available Seats: %d\n",
+                       buses[i].availableSeats);
+
+                found = 1;
+                break;
+            }
         }
     }
+    else if (choice == 2)
+    {
+        printf("Enter Bus Number: ");
 
-    if (!found)
-        printf("You have no current bookings.\n");
+        if (scanf("%31s", busNumber) != 1)
+        {
+            free(buses);
+            return;
+        }
+
+        for (i = 0; i < count; i++)
+        {
+            if (strcmp(buses[i].busNumber, busNumber) == 0)
+            {
+                printf("\nBus ID: %d\n", buses[i].busId);
+                printf("Bus Number: %s\n", buses[i].busNumber);
+                printf("Capacity: %d\n", buses[i].capacity);
+                printf("Available Seats: %d\n",
+                       buses[i].availableSeats);
+
+                found = 1;
+                break;
+            }
+        }
+    }
+    else
+    {
+        printf("Invalid choice.\n");
+    }
+
+    if (!found && (choice == 1 || choice == 2))
+        printf("Bus not found.\n");
+
+    free(buses);
 }
 
-void cancelBooking(Student *student, Seat seats[], int totalSeats)
+/* View Routes */
+void viewStudentRoutes(void)
 {
-    int busId, seatNumber;
+    Route *routes = NULL;
+    size_t count = 0;
+    size_t i;
 
-    printf("\nEnter Bus ID: ");
-    scanf("%d", &busId);
+    if (!readRecords(ROUTES_FILE, sizeof(Route),
+                     (void **)&routes, &count))
+    {
+        printf("Unable to load route records.\n");
+        return;
+    }
 
-    printf("Enter Seat Number: ");
-    scanf("%d", &seatNumber);
+    printf("\n--- Available Routes ---\n");
 
-    for (int i = 0; i < totalSeats; i++)
+    if (count == 0)
+        printf("No routes available.\n");
+
+    for (i = 0; i < count; i++)
+    {
+        printf("\nRoute ID: %d\n", routes[i].routeId);
+        printf("Route Name: %s\n", routes[i].routeName);
+        printf("Stops: %s\n", routes[i].stops);
+    }
+
+    free(routes);
+}
+
+/* View Student Schedule */
+void viewStudentSchedule(void)
+{
+    Schedule *schedules = NULL;
+    Bus *buses = NULL;
+    Route *routes = NULL;
+
+    size_t scheduleCount = 0;
+    size_t busCount = 0;
+    size_t routeCount = 0;
+
+    size_t i, j;
+    int busFound, routeFound;
+
+    if (!readRecords(SCHEDULES_FILE, sizeof(Schedule),
+                     (void **)&schedules, &scheduleCount))
+    {
+        printf("Unable to load schedules.\n");
+        return;
+    }
+
+    if (!readRecords(BUSES_FILE, sizeof(Bus),
+                     (void **)&buses, &busCount))
+    {
+        printf("Unable to load buses.\n");
+        free(schedules);
+        return;
+    }
+
+    if (!readRecords(ROUTES_FILE, sizeof(Route),
+                     (void **)&routes, &routeCount))
+    {
+        printf("Unable to load routes.\n");
+        free(schedules);
+        free(buses);
+        return;
+    }
+
+    printf("\n--- Bus Schedules ---\n");
+
+    for (i = 0; i < scheduleCount; i++)
+    {
+        busFound = 0;
+        routeFound = 0;
+
+        printf("\nSchedule ID: %d\n",
+               schedules[i].scheduleId);
+
+        for (j = 0; j < busCount; j++)
+        {
+            if (buses[j].busId == schedules[i].busId)
+            {
+                printf("Bus ID: %d\n", buses[j].busId);
+                printf("Bus Number: %s\n",
+                       buses[j].busNumber);
+
+                busFound = 1;
+                break;
+            }
+        }
+
+        for (j = 0; j < routeCount; j++)
+        {
+            if (routes[j].routeId == schedules[i].routeId)
+            {
+                printf("Route: %s\n",
+                       routes[j].routeName);
+
+                routeFound = 1;
+                break;
+            }
+        }
+
+        if (!busFound)
+            printf("Bus details unavailable.\n");
+
+        if (!routeFound)
+            printf("Route details unavailable.\n");
+
+        printf("Start Time: %s\n", schedules[i].startTime);
+        printf("End Time: %s\n", schedules[i].endTime);
+        printf("Day Type: %s\n", schedules[i].dayType);
+    }
+
+    free(schedules);
+    free(buses);
+    free(routes);
+}
+
+/* Check Seat Availability */
+void checkSeatAvailability(void)
+{
+    int busId;
+
+    if (!readInteger("Enter Bus ID: ", &busId))
+        return;
+
+    if (!displaySeatAvailability(busId, stdout))
+        printf("Unable to display seat availability.\n");
+}
+
+/* Book a Seat */
+void bookSeat(void)
+{
+    int studentId;
+    int busId;
+    int seatNumber;
+    int choice;
+    int result;
+
+    char preference[16];
+    Seat allocatedSeat;
+
+    if (!readInteger("Enter Student ID: ", &studentId))
+        return;
+
+    if (!readInteger("Enter Bus ID: ", &busId))
+        return;
+
+    printf("\nSeat Preference:\n");
+    printf("1. Window\n");
+    printf("2. Front\n");
+    printf("3. Any\n");
+
+    if (!readInteger("Enter preference: ", &choice))
+        return;
+
+    switch (choice)
+    {
+        case 1:
+            strcpy(preference, "Window");
+            break;
+
+        case 2:
+            strcpy(preference, "Front");
+            break;
+
+        case 3:
+            strcpy(preference, "Any");
+            break;
+
+        default:
+            printf("Invalid preference.\n");
+            return;
+    }
+
+    printf("\nBooking Options:\n");
+    printf("1. Automatically allocate a seat\n");
+    printf("2. Select a specific seat\n");
+
+    if (!readInteger("Enter choice: ", &choice))
+        return;
+
+    if (choice == 1)
+    {
+        result = allocateSeat(busId, studentId,
+                              preference, &allocatedSeat);
+    }
+    else if (choice == 2)
+    {
+        if (!readInteger("Enter Seat Number: ", &seatNumber))
+            return;
+
+        result = allocateSpecificSeat(
+            busId, studentId, seatNumber,
+            preference, &allocatedSeat);
+    }
+    else
+    {
+        printf("Invalid choice.\n");
+        return;
+    }
+
+    if (result == SEAT_ALLOCATION_BOOKED)
+    {
+        printf("Seat booked successfully!\n");
+        printf("Bus ID: %d\n", allocatedSeat.busId);
+        printf("Seat Number: %d\n", allocatedSeat.seatNumber);
+    }
+    else if (result == SEAT_ALLOCATION_WAITLISTED)
+    {
+        printf("Bus is full. You have been added to the waiting list.\n");
+    }
+    else
+    {
+        printf("Booking failed. Please check the bus and seat details.\n");
+    }
+}
+
+/* Cancel a Student Booking */
+void cancelStudentBooking(void)
+{
+    int studentId;
+    int busId;
+    int seatNumber;
+    int found = 0;
+    int promotedStudentId = -1;
+
+    size_t count = 0;
+    size_t i;
+
+    Seat *seats = NULL;
+    Seat freedSeat;
+
+    if (!readInteger("Enter Student ID: ", &studentId))
+        return;
+
+    if (!readInteger("Enter Bus ID: ", &busId))
+        return;
+
+    if (!readInteger("Enter Seat Number: ", &seatNumber))
+        return;
+
+    if (!getBusSeats(busId, &seats, &count))
+    {
+        printf("Unable to load bus seats.\n");
+        return;
+    }
+
+    for (i = 0; i < count; i++)
     {
         if (seats[i].busId == busId &&
             seats[i].seatNumber == seatNumber &&
-            seats[i].studentId == student->studentId &&
+            seats[i].studentId == studentId &&
             strcmp(seats[i].status, "Booked") == 0)
         {
-            seats[i].studentId = 0;
-            strcpy(seats[i].status, "Available");
-            strcpy(seats[i].preference, "Any");
-
-            printf("Booking cancelled successfully.\n");
-            return;
+            found = 1;
+            break;
         }
     }
 
-    printf("No matching booking found.\n");
+    free(seats);
+
+    if (!found)
+    {
+        printf("No matching booking found for this seat.\n");
+        return;
+    }
+
+    SeatCancellationResult result =
+        cancelSeat(busId, studentId, &freedSeat,
+                   &promotedStudentId);
+
+    if (result == SEAT_CANCELLATION_PROMOTED)
+    {
+        printf("Booking cancelled successfully.\n");
+        printf("Student %d was promoted from the waiting list.\n",
+               promotedStudentId);
+    }
+    else if (result == SEAT_CANCELLATION_COMPLETED)
+    {
+        printf("Booking cancelled successfully.\n");
+    }
+    else
+    {
+        printf("Cancellation failed.\n");
+    }
 }
 
-void studentModule(Student *student,
-                   Bus buses[], int totalBuses,
-                   Route routes[], int totalRoutes,
-                   Schedule schedules[], int totalSchedules,
-                   Seat seats[], int totalSeats)
+/* View Waiting List */
+void viewWaitingList(void)
 {
-    if (!studentLogin(student))
+    int busId;
+
+    if (!readInteger("Enter Bus ID: ", &busId))
         return;
 
+    if (!displayWaitingList(busId, stdout))
+        printf("Unable to display waiting list.\n");
+}
+
+/* Student Menu */
+void studentMenu(void)
+{
     int choice;
 
     do
     {
-        printf("\n===== STUDENT DASHBOARD =====\n");
-        printf("1. View Available Buses\n");
-        printf("2. Search Bus\n");
-        printf("3. View Routes and Timings\n");
-        printf("4. Check Seat Availability\n");
-        printf("5. Book Seat\n");
-        printf("6. View My Booking\n");
+        printf("\n========== STUDENT MENU ==========\n");
+        printf("1. View Student Profile\n");
+        printf("2. Search Buses\n");
+        printf("3. View Routes\n");
+        printf("4. View Bus Schedules\n");
+        printf("5. Check Seat Availability\n");
+        printf("6. Book a Seat\n");
         printf("7. Cancel Booking\n");
-        printf("0. Logout\n");
-        printf("Enter your choice: ");
-        scanf("%d", &choice);
+        printf("8. View Waiting List\n");
+        printf("0. Exit Student Menu\n");
+
+        if (!readInteger("Enter your choice: ", &choice))
+            continue;
 
         switch (choice)
         {
             case 1:
-                availableBuses(buses, totalBuses);
+                viewStudentProfile();
                 break;
 
             case 2:
-                searchBus(buses, totalBuses);
+                searchBuses();
                 break;
 
             case 3:
-                viewRouteTiming(routes, totalRoutes,
-                                schedules, totalSchedules,
-                                buses, totalBuses);
+                viewStudentRoutes();
                 break;
 
             case 4:
-            {
-                int busId;
-                printf("Enter Bus ID: ");
-                scanf("%d", &busId);
-
-                if (findBus(buses, totalBuses, busId) == -1)
-                    printf("Bus not found.\n");
-                else
-                    checkSeatAvailability(seats, totalSeats, busId);
+                viewStudentSchedule();
                 break;
-            }
 
             case 5:
-                bookSeat(student, seats, totalSeats);
+                checkSeatAvailability();
                 break;
 
             case 6:
-                studentDetails(student, seats, totalSeats);
+                bookSeat();
                 break;
 
             case 7:
-                cancelBooking(student, seats, totalSeats);
+                cancelStudentBooking();
+                break;
+
+            case 8:
+                viewWaitingList();
                 break;
 
             case 0:
-                printf("Logged out successfully.\n");
+                printf("Exiting Student Menu...\n");
                 break;
 
             default:
-                printf("Invalid choice.\n");
+                printf("Invalid choice. Try again.\n");
         }
 
     } while (choice != 0);
