@@ -1,3 +1,4 @@
+
 #include <stdio.h>
 #include <string.h>
 #include "route.h"
@@ -9,11 +10,13 @@ int routeCount = 0;
 void loadRoutes(void)
 {
     routeCount = 0;
+
     FILE *file = fopen("data/routes.dat", "rb");
     if (file == NULL)
         return;
 
-    while (routeCount < MAX_ROUTES && fread(&routes[routeCount], sizeof(Route), 1, file) == 1)
+    while (routeCount < MAX_ROUTES &&
+           fread(&routes[routeCount], sizeof(Route), 1, file) == 1)
     {
         routeCount++;
     }
@@ -24,11 +27,13 @@ void loadRoutes(void)
 int routeExists(int routeId)
 {
     loadRoutes();
+
     for (int i = 0; i < routeCount; i++)
     {
         if (routes[i].routeId == routeId)
             return 1;
     }
+
     return 0;
 }
 
@@ -42,16 +47,23 @@ int addRoute(int routeId, const char *routeName, const char *stops)
         return -1;
     }
 
-    if (routeExists(routeId))
+    for (int i = 0; i < routeCount; i++)
     {
-        printf("Route ID already exists!\n");
-        return -2;
+        if (routes[i].routeId == routeId)
+        {
+            printf("Route ID already exists!\n");
+            return -2;
+        }
     }
 
     Route newRoute;
     newRoute.routeId = routeId;
-    snprintf(newRoute.routeName, sizeof(newRoute.routeName), "%s", routeName ? routeName : "");
-    snprintf(newRoute.stops, sizeof(newRoute.stops), "%s", stops ? stops : "");
+
+    snprintf(newRoute.routeName, sizeof(newRoute.routeName),
+             "%s", routeName ? routeName : "");
+
+    snprintf(newRoute.stops, sizeof(newRoute.stops),
+             "%s", stops ? stops : "");
 
     saveRoute(newRoute);
     loadRoutes();
@@ -84,51 +96,88 @@ int removeRoute(int routeId)
 {
     loadRoutes();
 
-    FILE *file = fopen("data/routes.dat", "rb");
+    int found = 0;
+    int newCount = 0;
+
+    for (int i = 0; i < routeCount; i++)
+    {
+        if (routes[i].routeId == routeId)
+        {
+            found = 1;
+            continue;
+        }
+
+        routes[newCount++] = routes[i];
+    }
+
+    if (!found)
+    {
+        printf("Route ID not found!\n");
+        return -1;
+    }
+
+    FILE *file = fopen("data/routes.dat", "wb");
     if (file == NULL)
     {
         printf("Unable to open route records.\n");
         return -1;
     }
 
-    FILE *temp = fopen("data/temp_route.dat", "wb");
-    if (temp == NULL)
+    size_t saved = fwrite(routes, sizeof(Route), newCount, file);
+    fclose(file);
+
+    if (saved != (size_t)newCount)
     {
-        fclose(file);
-        printf("Unable to write temporary file.\n");
+        printf("Error saving route records!\n");
         return -1;
     }
 
-    Route route;
-    int found = 0;
+    routeCount = newCount;
+    printf("Route removed successfully!\n");
+    return 0;
+}
 
-    while (fread(&route, sizeof(Route), 1, file) == 1)
+int editRoute(int routeId, const char *routeName, const char *stops)
+{
+    if (routeName == NULL || stops == NULL)
     {
-        if (route.routeId == routeId)
-        {
-            found = 1;
-            continue;
-        }
-
-        fwrite(&route, sizeof(Route), 1, temp);
+        printf("Invalid route details!\n");
+        return -1;
     }
-
-    fclose(file);
-    fclose(temp);
-
-    remove("data/routes.dat");
-    rename("data/temp_route.dat", "data/routes.dat");
 
     loadRoutes();
 
-    if (found)
+    for (int i = 0; i < routeCount; i++)
     {
-        printf("Route removed successfully!\n");
-        return 0;
+        if (routes[i].routeId == routeId)
+        {
+            snprintf(routes[i].routeName,
+                     sizeof(routes[i].routeName), "%s", routeName);
+
+            snprintf(routes[i].stops,
+                     sizeof(routes[i].stops), "%s", stops);
+
+            FILE *file = fopen("data/routes.dat", "wb");
+            if (file == NULL)
+            {
+                printf("Error opening routes file!\n");
+                return -1;
+            }
+
+            size_t saved = fwrite(routes, sizeof(Route), routeCount, file);
+            fclose(file);
+
+            if (saved != (size_t)routeCount)
+            {
+                printf("Error saving updated route!\n");
+                return -1;
+            }
+
+            printf("Route updated successfully!\n");
+            return 0;
+        }
     }
-    else
-    {
-        printf("Route ID not found!\n");
-        return -1;
-    }
+
+    printf("Route not found!\n");
+    return -1;
 }

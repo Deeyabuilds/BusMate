@@ -11,11 +11,21 @@ void busModuleAddBus(void)
     char number[50];
 
     printf("Enter Bus ID: ");
-    scanf("%d", &id);
+    if (scanf("%d", &id) != 1) {
+        while (getchar() != '\n' && !feof(stdin)) {}
+        printf("Invalid Bus ID!\n");
+        return;
+    }
+
     printf("Enter Bus Number: ");
     scanf("%49s", number);
+
     printf("Enter Bus Capacity: ");
-    scanf("%d", &capacity);
+    if (scanf("%d", &capacity) != 1) {
+        while (getchar() != '\n' && !feof(stdin)) {}
+        printf("Invalid capacity!\n");
+        return;
+    }
 
     if (capacity <= 0) {
         printf("Capacity must be positive.\n");
@@ -33,8 +43,13 @@ void busModuleViewBuses(void)
 void busModuleSearchBuses(void)
 {
     int id;
+
     printf("Enter Bus ID to search: ");
-    scanf("%d", &id);
+    if (scanf("%d", &id) != 1) {
+        while (getchar() != '\n' && !feof(stdin)) {}
+        printf("Invalid Bus ID!\n");
+        return;
+    }
 
     if (busExists(id))
         printf("Bus ID %d exists.\n", id);
@@ -50,26 +65,40 @@ void busModuleUpdateBus(void)
 void busModuleRemoveBus(void)
 {
     int id;
+
     printf("Enter Bus ID to remove: ");
-    scanf("%d", &id);
+    if (scanf("%d", &id) != 1) {
+        while (getchar() != '\n' && !feof(stdin)) {}
+        printf("Invalid Bus ID!\n");
+        return;
+    }
+
     removeBus(id);
 }
 
 void busModuleAddRoute(void)
 {
     int id;
-    char name[100], stops[300];
+    char name[100];
+    char stops[200];
 
     printf("Enter Route ID: ");
-    scanf("%d", &id);
+    if (scanf("%d", &id) != 1) {
+        while (getchar() != '\n' && !feof(stdin)) {}
+        printf("Invalid Route ID!\n");
+        return;
+    }
+
     getchar();
 
     printf("Enter Route Name: ");
-    if (!fgets(name, sizeof(name), stdin)) return;
+    if (fgets(name, sizeof(name), stdin) == NULL)
+        return;
     name[strcspn(name, "\n")] = '\0';
 
     printf("Enter Stops (comma-separated): ");
-    if (!fgets(stops, sizeof(stops), stdin)) return;
+    if (fgets(stops, sizeof(stops), stdin) == NULL)
+        return;
     stops[strcspn(stops, "\n")] = '\0';
 
     addRoute(id, name, stops);
@@ -83,8 +112,13 @@ void busModuleViewRoutes(void)
 void busModuleSearchRoutes(void)
 {
     int id;
+
     printf("Enter Route ID to search: ");
-    scanf("%d", &id);
+    if (scanf("%d", &id) != 1) {
+        while (getchar() != '\n' && !feof(stdin)) {}
+        printf("Invalid Route ID!\n");
+        return;
+    }
 
     if (routeExists(id))
         printf("Route ID %d exists.\n", id);
@@ -94,14 +128,44 @@ void busModuleSearchRoutes(void)
 
 void busModuleUpdateRoute(void)
 {
-    printf("Route update is not supported by the existing route module yet.\n");
+    int id;
+    char name[100];
+    char stops[200];
+
+    printf("Enter Route ID to update: ");
+    if (scanf("%d", &id) != 1) {
+        while (getchar() != '\n' && !feof(stdin)) {}
+        printf("Invalid Route ID!\n");
+        return;
+    }
+
+    getchar();
+
+    printf("Enter new Route Name: ");
+    if (fgets(name, sizeof(name), stdin) == NULL)
+        return;
+    name[strcspn(name, "\n")] = '\0';
+
+    printf("Enter new Stops (comma-separated): ");
+    if (fgets(stops, sizeof(stops), stdin) == NULL)
+        return;
+    stops[strcspn(stops, "\n")] = '\0';
+
+    if (editRoute(id, name, stops) != 0)
+        printf("Route update failed. Check the Route ID.\n");
 }
 
 void busModuleRemoveRoute(void)
 {
     int id;
+
     printf("Enter Route ID to remove: ");
-    scanf("%d", &id);
+    if (scanf("%d", &id) != 1) {
+        while (getchar() != '\n' && !feof(stdin)) {}
+        printf("Invalid Route ID!\n");
+        return;
+    }
+
     removeRoute(id);
 }
 
@@ -126,7 +190,7 @@ void busRouteMenu(void)
 
         if (scanf("%d", &choice) != 1) {
             while (getchar() != '\n' && !feof(stdin)) {}
-            choice = -1;
+            printf("Invalid choice.\n");
             continue;
         }
 
