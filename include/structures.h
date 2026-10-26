@@ -1,52 +1,46 @@
 #ifndef STRUCTURES_H
 #define STRUCTURES_H
 
-#define ID_LENGTH 20
-#define NAME_LENGTH 50
-#define PASSWORD_LENGTH 50
-#define LOCATION_LENGTH 50
-#define TIME_LENGTH 20
-
 typedef struct {
-    char student_id[ID_LENGTH];
-    char name[NAME_LENGTH];
-    char password[PASSWORD_LENGTH];
+    char student_id[20];
+    char name[50];
+    char password[50];
 } Student;
 
 typedef struct {
-    char admin_id[ID_LENGTH];
-    char username[NAME_LENGTH];
-    char password[PASSWORD_LENGTH];
+    char admin_id[20];
+    char username[50];
+    char password[50];
 } Admin;
 
 typedef struct {
-    char bus_id[ID_LENGTH];
-    char bus_number[ID_LENGTH];
+    char driver_id[20];
+    char name[50];
+    char assigned_bus_id[20];
+} Driver;
+
+typedef struct {
+    char bus_id[20];
+    char bus_number[20];
     int capacity;
 } Bus;
 
 typedef struct {
-    char route_id[ID_LENGTH];
-    char starting_point[LOCATION_LENGTH];
-    char destination[LOCATION_LENGTH];
+    char route_id[20];
+    char starting_point[50];
+    char destination[50];
 } Route;
 
 typedef struct {
-    char driver_id[ID_LENGTH];
-    char name[NAME_LENGTH];
-    char assigned_bus_id[ID_LENGTH];
-} Driver;
-
-typedef struct {
-    char schedule_id[ID_LENGTH];
-    char bus_id[ID_LENGTH];
-    char route_id[ID_LENGTH];
-    char departure_time[TIME_LENGTH];
+    char schedule_id[20];
+    char bus_id[20];
+    char route_id[20];
+    char departure_time[20];
 } Schedule;
 
 typedef struct {
-    char student_id[ID_LENGTH];
-    char schedule_id[ID_LENGTH];
+    char student_id[20];
+    char schedule_id[20];
     int seat_number;
 } Booking;
 
